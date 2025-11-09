@@ -1,0 +1,678 @@
+{% extends 'scanner/base.html' %}
+{% load static %}
+{% load scanner_filters %}
+
+{% block title %}Detail Scan - {{ scan.domain }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-search"></i> Detail Scan untuk Domain: <strong>{{ scan.domain }}</strong>
+                    </h3>
+                    <div class="card-tools">
+                        <span class="badge-{% if scan.status == 'COMPLETED' %}success{% elif scan.status == 'PROCESSING' %}warning{% elif scan.status == 'FAILED' %}danger{% else %}secondary{% endif %} badge-lg mr-2">
+                            {{ scan.status }}
+                        </span>
+                        <span class=" badge-secondary">
+                            <i class="fas fa-clock"></i> {{ scan.start_time|date:"d M Y H:i" }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Scan Configuration -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card card-outline card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-cog"></i> Konfigurasi Scan
+                                    </h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="info-box mb-3">
+                                                <span class="info-box-icon bg-info elevation-1">
+                                                    <i class="fas fa-tasks"></i>
+                                                </span>
+                                                <div class="info-box-content">
+                                                    <span class="info-box-text">Tipe Scan</span>
+                                                    <span class="info-box-number">
+                                                        {% if scan.scan_type == "Komprehensif (Google + Crawling)" %}
+                                                            <span class="badge-primary badge-lg">Komprehensif</span>
+                                                        {% else %}
+                                                            <span class="badge-secondary badge-lg">Cepat</span>
+                                                        {% endif %}
+                                                    </span>
+                                                    <small class="text-muted">{{ scan.scan_type }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="info-box mb-3">
+                                                <span class="info-box-icon {% if scan.ran_with_verification %}bg-success{% else %}bg-secondary{% endif %} elevation-1">
+                                                    <i class="fas fa-shield-alt"></i>
+                                                </span>
+                                                <div class="info-box-content">
+                                                    <span class="info-box-text">Verifikasi Real-Time</span>
+                                                    <span class="info-box-number">
+                                                        {% if scan.ran_with_verification %}
+                                                            <span class="badge-success badge-lg">
+                                                                <i class="fas fa-check-circle"></i> Aktif
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge-secondary badge-lg">
+                                                                <i class="fas fa-times-circle"></i> Tidak Aktif
+                                                            </span>
+                                                        {% endif %}
+                                                    </span>
+                                                    <small class="text-muted">
+                                                        {% if scan.ran_with_verification %}
+                                                            Hasil diverifikasi dengan Selenium
+                                                        {% else %}
+                                                            Tanpa verifikasi real-time
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="info-box mb-3">
+                                                <span class="info-box-icon {% if scan.showed_all_results %}bg-warning{% else %}bg-info{% endif %} elevation-1">
+                                                    <i class="fas fa-filter"></i>
+                                                </span>
+                                                <div class="info-box-content">
+                                                    <span class="info-box-text">Tampilkan Semua Hasil</span>
+                                                    <span class="info-box-number">
+                                                        {% if scan.showed_all_results %}
+                                                            <span class="badge-warning badge-lg">
+                                                                <i class="fas fa-check-circle"></i> Ya
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge-info badge-lg">
+                                                                <i class="fas fa-times-circle"></i> Tidak
+                                                            </span>
+                                                        {% endif %}
+                                                    </span>
+                                                    <small class="text-muted">
+                                                        {% if scan.showed_all_results %}
+                                                            Menampilkan semua hasil terindikasi
+                                                        {% else %}
+                                                            Hanya hasil yang terverifikasi
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Additional Info -->
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <div class="callout callout-info">
+                                                <h5><i class="fas fa-info-circle"></i> Informasi Tambahan</h5>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <strong><i class="fas fa-calendar-alt"></i> Waktu Scan:</strong><br>
+                                                        <i class="fas fa-play text-success"></i> Mulai: {{ scan.start_time|date:"d M Y, H:i:s" }}<br>
+                                                        {% if scan.end_time %}
+                                                            <i class="fas fa-stop text-danger"></i> Selesai: {{ scan.end_time|date:"d M Y, H:i:s" }}<br>
+                                                            <i class="fas fa-clock text-info"></i> Durasi: 
+                                                            {% if scan_duration %}
+                                                                <span class="badge-info">{{ scan_duration }}</span>
+                                                            {% else %}
+                                                                <span class="text-muted">Menghitung...</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge-warning">
+                                                                <i class="fas fa-spinner fa-spin"></i> Sedang berlangsung...
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <strong><i class="fas fa-user"></i> Di-scan oleh:</strong><br>
+                                                        {{ scan.user.username }}
+                                                        {% if scan.user.is_admin %}
+                                                            <span class="badge-warning">Admin</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if results %}
+                        <script id="scan-results-data" type="application/json">
+                            {{ results|safe }}
+                        </script>
+
+                        <!-- Action Buttons -->
+                        <div class="mb-4">
+                            {% if scan.status == 'COMPLETED' %}
+                                {% if not dashboard_summary %}
+                                    <a href="{% url 'scanner:add_to_dashboard' scan.pk %}" class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Tambah ke Dashboard
+                                    </a>
+                                {% else %}
+                                    <span class="badge-info">
+                                        <i class="fas fa-check"></i> Sudah ada di Dashboard
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Domain Information -->
+                        {% if domain_info %}
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5><i class="fas fa-info-circle"></i> Informasi Domain</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm table-borderless">
+                                            <tr>
+                                                <td width="40%"><strong>Registrar:</strong></td>
+                                                <td>{{ domain_info.registrar|default:"Tidak diketahui" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Tanggal Dibuat:</strong></td>
+                                                <td>{{ domain_info.creation_date|default:"Tidak diketahui" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Tanggal Kadaluarsa:</strong></td>
+                                                <td>{{ domain_info.expiration_date|default:"Tidak diketahui" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Status:</strong></td>
+                                                <td>{{ domain_info.status|default:"Tidak diketahui" }}</td>
+                                            </tr>
+                                            {% if domain_info.age_days %}
+                                            <tr>
+                                                <td><strong>Umur Domain:</strong></td>
+                                                <td>{{ domain_info.age_days }} hari</td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if domain_info.name_servers %}
+                                            <tr>
+                                                <td><strong>Name Servers:</strong></td>
+                                                <td>
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for ns in domain_info.name_servers %}
+                                                        <li><code>{{ ns }}</code></li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                        </table>
+                                        
+                                        <!-- Blacklist Check -->
+                                        {% if domain_info.blacklist_check %}
+                                        <div class="mt-3">
+                                            <h6><i class="fas fa-shield-alt"></i> Blacklist Check</h6>
+                                            {% for source, check in domain_info.blacklist_check.items %}
+                                            <div class="mb-2">
+                                                <strong>{{ source|upper }}:</strong>
+                                                {% if check.status == 'error' %}
+                                                    <span class="badge-warning">{{ check.message }}</span>
+                                                {% elif check.status == 'blacklisted' %}
+                                                    <span class="badge-danger">
+                                                        Blacklisted (Score: {{ check.abuse_score }}, Reports: {{ check.total_reports }})
+                                                    </span>
+                                                {% elif check.status == 'clean' %}
+                                                    <span class="badge-success">Clean</span>
+                                                {% else %}
+                                                    <span class="badge-secondary">Unknown</span>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5><i class="fas fa-sitemap"></i> Subdomain Enumeration</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if subdomain_results %}
+                                            {% if subdomain_results.total_subdomains %}
+                                                <p><strong>Total Subdomains:</strong> <span class="badge-info">{{ subdomain_results.total_subdomains }}</span></p>
+                                            {% endif %}
+                                            {% if subdomain_results.techniques_used %}
+                                            <p class="text-muted small mb-2">
+                                                <strong>Teknik yang digunakan:</strong> 
+                                                {% for technique in subdomain_results.techniques_used %}
+                                                    <span class="badge-secondary">{{ technique }}</span>
+                                                {% endfor %}
+                                            </p>
+                                            {% endif %}
+                                            
+                                            {% if subdomain_results.subdomains and subdomain_results.subdomains|length > 0 %}
+                                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                                    <table class="table table-sm table-hover">
+                                                        <thead class="thead-light sticky-top">
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Subdomain</th>
+                                                                <th>IP Address</th>
+                                                                <th>Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for sub in subdomain_results.subdomains %}
+                                                            <tr>
+                                                                <td>{{ forloop.counter }}</td>
+                                                                <td>
+                                                                    <a href="https://{{ sub.subdomain }}" target="_blank" class="text-decoration-none">
+                                                                        <i class="fas fa-external-link-alt"></i> {{ sub.subdomain }}
+                                                                    </a>
+                                                                </td>
+                                                                <td>
+                                                                    {% if sub.ip %}
+                                                                        <code>{{ sub.ip }}</code>
+                                                                    {% else %}
+                                                                        <span class="text-muted">N/A</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if sub.status == 'active' %}
+                                                                        <span class="badge-success">Aktif</span>
+                                                                    {% else %}
+                                                                        <span class="badge-secondary">Tidak Aktif</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle"></i> Tidak ada subdomain yang ditemukan. Mungkin domain ini tidak memiliki subdomain atau teknik enumerasi belum menemukan subdomain aktif.
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> Data subdomain enumeration tidak tersedia. Fitur ini mungkin tidak aktif pada scan ini.
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Subdomain Enumeration - Full Width Card (More Prominent) -->
+                        {% if subdomain_results and subdomain_results.subdomains and subdomain_results.subdomains|length > 0 %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card card-primary card-outline">
+                                    <div class="card-header">
+                                        <h3 class="card-title">
+                                            <i class="fas fa-sitemap"></i> Daftar Semua Subdomain yang Ditemukan
+                                            <span class="badge-light ml-2">{{ subdomain_results.subdomains|length }}</span>
+                                        </h3>
+                                        {% if subdomain_results.total_subdomains %}
+                                        <div class="card-tools">
+                                            <span class="badge-info">Total: {{ subdomain_results.total_subdomains }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-body">
+                                        {% if subdomain_results.techniques_used %}
+                                        <div class="alert alert-info mb-3">
+                                            <strong><i class="fas fa-cogs"></i> Teknik Enumerasi yang Digunakan:</strong>
+                                            {% for technique in subdomain_results.techniques_used %}
+                                                <span class="badge-info ml-1">{{ technique }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-striped table-hover">
+                                                <thead class="thead-dark">
+                                                    <tr>
+                                                        <th style="width: 50px;">#</th>
+                                                        <th><i class="fas fa-globe"></i> Subdomain</th>
+                                                        <th><i class="fas fa-network-wired"></i> IP Address</th>
+                                                        <th style="width: 120px;"><i class="fas fa-check-circle"></i> Status</th>
+                                                        <th style="width: 100px;"><i class="fas fa-link"></i> Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for sub in subdomain_results.subdomains %}
+                                                    <tr>
+                                                        <td class="text-center"><strong>{{ forloop.counter }}</strong></td>
+                                                        <td>
+                                                            <a href="https://{{ sub.subdomain }}" target="_blank" class="text-decoration-none font-weight-bold">
+                                                                <i class="fas fa-external-link-alt text-primary"></i> {{ sub.subdomain }}
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            {% if sub.ip %}
+                                                                <code class="bg-light p-1 rounded">{{ sub.ip }}</code>
+                                                            {% else %}
+                                                                <span class="text-muted"><i class="fas fa-minus"></i> Tidak tersedia</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {% if sub.status == 'active' %}
+                                                                <span class="badge-success badge-lg">
+                                                                    <i class="fas fa-check-circle"></i> Aktif
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="badge-secondary badge-lg">
+                                                                    <i class="fas fa-times-circle"></i> Tidak Aktif
+                                                                </span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <a href="https://{{ sub.subdomain }}" target="_blank" class="btn btn-sm btn-primary" title="Buka subdomain">
+                                                                <i class="fas fa-external-link-alt"></i> Buka
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> Total subdomain yang ditemukan: <strong>{{ subdomain_results.subdomains|length }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6 text-right">
+                                                    {% if subdomain_results.subdomains|length > 10 %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-filter"></i> Gunakan scroll untuk melihat semua subdomain
+                                                    </small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Scan Results by Category -->
+                        {% if results.categories %}
+                            {% for category_code, category in results.categories.items %}
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                        {{ category.name }}
+                                        <span class="badge-danger">{{ category.items|length }}</span>
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>URL</th>
+                                                    <th>Title</th>
+                                                    <th>Verification</th>
+                                                    <th>Deep Analysis</th>
+                                                    {% if user.is_admin %}
+                                                    <th>Admin Actions</th>
+                                                    {% endif %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in category.items %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="{{ item.url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 300px;">
+                                                            {{ item.url }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ item.title|truncatechars:50 }}</td>
+                                                    <td>
+                                                        {% if item.verification %}
+                                                            {% if item.verification.verification_status == 'live_malicious' %}
+                                                                <span class="badge-danger">Live Malicious</span>
+                                                            {% elif item.verification.verification_status == 'cache_only' %}
+                                                                <span class="badge-warning">Cache Only</span>
+                                                            {% else %}
+                                                                <span class="badge-success">Clean</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge-secondary">Not Verified</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if item.global_index is not None %}
+                                                            <a href="{% url 'scanner:item_analysis' scan.pk item.global_index %}" class="btn btn-sm btn-info" title="Lihat analisis mendalam">
+                                                                <i class="fas fa-microscope"></i> Detail
+                                                            </a>
+                                                        {% else %}
+                                                            <span class="text-muted">N/A</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    {% if user.is_admin %}
+                                                    <td>
+                                                        <form method="post" action="{% url 'scanner:add_to_dataset' scan.pk %}" class="d-inline">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="url" value="{{ item.url }}">
+                                                            <input type="hidden" name="title" value="{{ item.title|default:'' }}">
+                                                            <input type="hidden" name="description" value="{{ item.snippet|default:'' }}">
+                                                            <input type="hidden" name="label_status" value="malicious">
+                                                            <button type="submit" class="btn btn-sm btn-success" title="Tambah ke dataset training (Admin Only)">
+                                                                <i class="fas fa-database"></i> Dataset
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                    {% endif %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-success">
+                                <h4><i class="icon fas fa-check"></i> Domain Aman!</h4>
+                                Tidak ditemukan konten berbahaya pada domain ini.
+                            </div>
+                        {% endif %}
+
+                        <!-- Graph Analysis (for comprehensive scans) -->
+                        {% if results.graph_analysis %}
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Analisis Graf Jaringan Internal</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-info"><i class="fas fa-project-diagram"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Total Nodes</span>
+                                                <span class="info-box-number">{{ results.graph_analysis.total_nodes }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-success"><i class="fas fa-link"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Total Edges</span>
+                                                <span class="info-box-number">{{ results.graph_analysis.total_edges }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-warning"><i class="fas fa-unlink"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Orphan Pages</span>
+                                                <span class="info-box-number">{{ results.graph_analysis.orphan_pages|length }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% if results.graph_analysis.orphan_pages %}
+                                <div class="mt-3">
+                                    <h6>Orphan Pages (Halaman Terisolasi):</h6>
+                                    <ul class="list-group">
+                                        {% for page in results.graph_analysis.orphan_pages %}
+                                        <li class="list-group-item">{{ page }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                {% if results.graph_analysis.suspicious_pages %}
+                                <div class="mt-3">
+                                    <h6>Halaman Mencurigakan (via Graph Crawler):</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>URL</th>
+                                                    <th>Title</th>
+                                                    <th>Snippet</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for page in results.graph_analysis.suspicious_pages %}
+                                                <tr>
+                                                    <td><a href="{{ page.url }}" target="_blank">{{ page.url|truncatechars:50 }}</a></td>
+                                                    <td>{{ page.title|truncatechars:30 }}</td>
+                                                    <td>{{ page.snippet|truncatechars:100 }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <h4><i class="icon fas fa-exclamation-triangle"></i> Hasil Scan Belum Tersedia</h4>
+                            <p>Scan masih dalam proses atau belum selesai.</p>
+                            <p class="mb-0">Status: <span class="badge-{% if scan.status == 'PROCESSING' %}warning{% elif scan.status == 'FAILED' %}danger{% else %}secondary{% endif %}">{{ scan.status }}</span></p>
+                            {% if scan.error_message %}
+                            <div class="mt-2">
+                                <strong>Error:</strong> {{ scan.error_message }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for detailed view -->
+<div class="modal fade" id="detailsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Detail Analisis</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-box {
+    display: block;
+    min-height: 90px;
+    background: #fff;
+    width: 100%;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    border-radius: 2px;
+    margin-bottom: 15px;
+}
+.info-box-icon {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 2px;
+    display: block;
+    float: left;
+    height: 90px;
+    width: 90px;
+    text-align: center;
+    font-size: 45px;
+    line-height: 90px;
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+}
+.info-box-content {
+    padding: 5px 10px;
+    margin-left: 90px;
+}
+.info-box-text {
+    display: block;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.info-box-number {
+    display: block;
+    font-weight: bold;
+    font-size: 18px;
+}
+.elevation-1 {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24) !important;
+}
+.callout {
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+.callout-info {
+    border-left: 4px solid #17a2b8;
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+.callout h5 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+</style>
+
+<script>
+function showDetails(itemId) {
+    // This would need to be implemented to show detailed analysis
+    // For now, just show a placeholder
+    $('#modalContent').html('<p>Detail analysis feature coming soon...</p>');
+    $('#detailsModal').modal('show');
+}
+</script>
+{% endblock %}

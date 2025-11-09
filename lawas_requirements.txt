@@ -1,0 +1,176 @@
+aiohttp
+alembic
+altair
+amqp
+annotated-types
+anyio
+asgiref
+asttokens
+async-timeout
+attrs
+bcrypt
+beautifulsoup4  1
+billiard
+blinker==1.6.2    1
+brotli
+cachetools
+celery==5.2.7
+certifi
+cffi
+charset-normalizer
+click
+click-didyoumean
+click-plugins
+click-repl
+cloudpickle
+colorama
+contourpy
+cryptography
+cycler
+databricks-sdk
+decorator
+django
+django-redis             1
+djangorestframework       1
+dnspython    1
+docker
+drf-spectacular           1
+ecdsa
+eventlet
+exceptiongroup
+executing
+fastapi
+filelock
+flask
+fonttools
+fpdf
+frozenlist
+future
+gitdb
+gitpython
+google-auth
+graphene
+graphql-core
+graphql-relay
+greenlet
+h11
+h2
+hpack
+httpcore
+httpx   1
+hyperframe
+hyperopt
+idna
+imbalanced-learn
+imblearn
+inflection
+ipython
+itsdangerous
+jedi
+jinja2
+joblib    1
+jsonschema
+jsonschema-specifications
+kaitaistruct
+kiwisolver
+kombu
+mako
+markupsafe
+matplotlib
+matplotlib-inline
+mlflow
+mlflow-skinny
+mlflow-tracing
+multidict
+mysql
+mysql-connector-python
+mysqlclient
+narwhals
+networkx    1
+nltk
+numpy
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-semantic-conventions
+outcome
+packaging
+pandas         1
+parso
+passlib
+pillow
+plotly
+propcache
+protobuf
+psycopg2-binary
+py4j
+pyarrow
+pyasn1
+pycparser
+pydantic
+pydeck
+pydivert
+pygments
+pyopenssl
+pyparsing
+pysocks
+python-dateutil
+python-dotenv     1
+python-jose
+python-multipart
+python-whois  1
+pytz
+pywin32
+pyyaml
+redis
+referencing
+regex
+reportlab       1
+requests
+requests-file
+rpds-py
+rsa
+sastrawi   1
+schedule
+scikit-learn   1
+scipy
+seaborn
+selenium
+selenium-wire  1
+serpapi     1
+search-results   1
+six
+smmap
+sniffio
+sortedcontainers
+soupsieve
+sqlalchemy
+sqlparse
+stack-data
+starlette
+streamlit
+tenacity
+threadpoolctl
+tldextract   1
+toml
+tomli
+tornado
+tqdm
+traitlets
+trio
+trio-websocket
+typing-inspection
+tzdata
+uritemplate
+urllib3
+uvicorn
+vine
+waitress
+watchdog
+wcwidth
+websocket-client
+werkzeug
+wordcloud
+wsproto
+yarl
+zipp
+zstandard

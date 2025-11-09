@@ -1,0 +1,123 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Kelola Kata Kunci - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-tags me-2"></i>Kelola Kata Kunci Deteksi</h1>
+    <p class="lead">Manajemen lengkap kata kunci untuk deteksi konten berbahaya</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <!-- Action Buttons -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'scanner:keyword_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Tambah Kata Kunci Baru
+                        </a>
+                        <a href="{% url 'scanner:config' %}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-cogs me-2"></i>Kembali ke Konfigurasi
+                        </a>
+                    </div>
+                    <div class="text-muted">
+                        Total: {{ keywords|length }} kata kunci
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keywords Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Daftar Kata Kunci</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Kategori kata kunci:</strong><br>
+                    <span class="badge bg-danger me-1">Judi Online</span>
+                    <span class="badge bg-warning me-1">Pornografi</span>
+                    <span class="badge bg-dark me-1">Hacking/Malware</span>
+                    <span class="badge bg-secondary">Lainnya</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th><i class="fas fa-tag me-1"></i>Kata Kunci</th>
+                                <th><i class="fas fa-folder me-1"></i>Kategori</th>
+                                <th><i class="fas fa-toggle-on me-1"></i>Status</th>
+                                <th><i class="fas fa-calendar me-1"></i>Dibuat</th>
+                                <th><i class="fas fa-user me-1"></i>Pembuat</th>
+                                <th><i class="fas fa-cogs me-1"></i>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for keyword in keywords %}
+                            <tr>
+                                <td>
+                                    <strong>{{ keyword.keyword }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if keyword.category == 'judi' %}danger{% elif keyword.category == 'pornografi' %}warning{% elif keyword.category == 'hacking' %}dark{% else %}secondary{% endif %}">
+                                        {{ keyword.get_category_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if keyword.is_active %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Aktif
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-times me-1"></i>Non-Aktif
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ keyword.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if keyword.created_by %}
+                                        {{ keyword.created_by.username }}
+                                    {% else %}
+                                        <em class="text-muted">System</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'scanner:keyword_edit' keyword.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'scanner:keyword_toggle' keyword.id %}" class="btn btn-sm btn-outline-warning" title="Toggle Status">
+                                            <i class="fas fa-toggle-on"></i>
+                                        </a>
+                                        <a href="{% url 'scanner:keyword_delete' keyword.id %}" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <br>
+                                    <strong>Belum ada kata kunci terdaftar</strong>
+                                    <br>
+                                    <a href="{% url 'scanner:keyword_create' %}" class="btn btn-primary mt-3">
+                                        <i class="fas fa-plus me-2"></i>Tambah Kata Kunci Pertama
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Hapus Kata Kunci - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-trash-alt me-2 text-danger"></i>Hapus Kata Kunci</h1>
+    <p class="lead">Konfirmasi penghapusan kata kunci</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Konfirmasi Penghapusan</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Perhatian!</strong> Tindakan ini tidak dapat dibatalkan.
+                </div>
+
+                <p>Apakah Anda yakin ingin menghapus kata kunci berikut?</p>
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ keyword.keyword }}</h5>
+                        <p class="card-text">
+                            <strong>Kategori:</strong>
+                            <span class="badge bg-{% if keyword.category == 'judi' %}danger{% elif keyword.category == 'pornografi' %}warning{% elif keyword.category == 'hacking' %}dark{% else %}secondary{% endif %}">
+                                {{ keyword.get_category_display }}
+                            </span>
+                        </p>
+                        <p class="card-text">
+                            <strong>Status:</strong>
+                            {% if keyword.is_active %}
+                                <span class="badge bg-success">Aktif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Non-Aktif</span>
+                            {% endif %}
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                Dibuat pada: {{ keyword.created_at|date:"d M Y, H:i" }}
+                                {% if keyword.created_by %}
+                                oleh {{ keyword.created_by.username }}
+                                {% endif %}
+                            </small>
+                        </p>
+                    </div>
+                </div>
+
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Ya, Hapus Kata Kunci
+                        </button>
+                        <a href="{% url 'scanner:keywords' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Batal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

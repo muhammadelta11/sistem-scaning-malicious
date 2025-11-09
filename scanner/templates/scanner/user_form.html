@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% if title %}{{ title }}{% else %}Manajemen User{% endif %} - Pemindai Domain</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .logout-btn { padding: 8px 12px; background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; text-decoration: none;}
+        .form-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { border-color: #007bff; outline: none; }
+        .btn-submit { background: #28a745; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .btn-submit:hover { background: #218838; }
+        .btn-cancel { background: #6c757d; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; margin-left: 10px; }
+        .btn-cancel:hover { background: #545b62; }
+        .error-message { color: #dc3545; font-size: 14px; margin-top: 5px; }
+        .help-text { color: #6c757d; font-size: 12px; margin-top: 5px; }
+        .checkbox-group { display: flex; align-items: center; }
+        .checkbox-group input { width: auto; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <!-- Main Navigation Menu -->
+    <nav style="background: #343a40; color: white; padding: 15px 0; margin-bottom: 30px; border-radius: 8px;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <a href="{% url 'scanner:scanner_page' %}" style="color: white; text-decoration: none; font-weight: bold; font-size: 18px;">🔍 Pemindai Domain</a>
+                    <a href="{% url 'scanner:dashboard' %}" style="color: white; text-decoration: none;">📊 Dashboard Peringkat</a>
+                    <a href="{% url 'scanner:config' %}" style="color: white; text-decoration: none;">⚙️ Konfigurasi</a>
+                    <a href="{% url 'scanner:audit' %}" style="color: white; text-decoration: none;">🛡️ Audit Log</a>
+                    <a href="{% url 'scanner:users' %}" style="color: white; text-decoration: none;">👤 Manajemen User</a>
+                    <a href="{% url 'scanner:profile' %}" style="color: white; text-decoration: none;">👤 Profile</a>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 14px;">Login sebagai: <strong>{{ user.username }}</strong> ({{ user.organization_name }})</span>
+                    <form method="post" action="{% url 'scanner:logout' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h1>{% if title %}{{ title }}{% else %}Manajemen User{% endif %}</h1>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                <div class="help-text">{{ field.help_text }}</div>
+                {% endif %}
+                {% if field.errors %}
+                <div class="error-message">
+                    {% for error in field.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="form-group">
+                <button type="submit" class="btn-submit">{{ submit_text|default:"Simpan" }}</button>
+                <a href="{% url 'scanner:users' %}" class="btn-cancel">Batal</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

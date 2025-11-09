@@ -1,0 +1,148 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}{% if title %}{{ title }}{% else %}Tambah Kata Kunci Massal{% endif %} - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-plus-circle me-2"></i>{% if title %}{{ title }}{% else %}Tambah Kata Kunci Massal{% endif %}</h1>
+    <p class="lead">Tambahkan banyak kata kunci sekaligus untuk deteksi yang lebih efektif</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Form Input Massal</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Cara menggunakan:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Masukkan kata kunci satu per baris</li>
+                        <li>Baris kosong akan diabaikan</li>
+                        <li>Maksimal 50 kata kunci per batch</li>
+                        <li>Semua kata kunci akan menggunakan kategori dan status yang sama</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    <i class="fas fa-folder me-1"></i>{{ form.category.label }}
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.help_text %}
+                                <div class="form-text">{{ form.category.help_text }}</div>
+                                {% endif %}
+                                {% if form.category.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.category.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        <i class="fas fa-toggle-on me-1"></i>{{ form.is_active.label }}
+                                    </label>
+                                    {% if form.is_active.help_text %}
+                                    <div class="form-text">{{ form.is_active.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                                {% if form.is_active.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.is_active.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.keywords_text.id_for_label }}" class="form-label">
+                            <i class="fas fa-keyboard me-1"></i>{{ form.keywords_text.label }}
+                        </label>
+                        {{ form.keywords_text }}
+                        {% if form.keywords_text.help_text %}
+                        <div class="form-text">{{ form.keywords_text.help_text }}</div>
+                        {% endif %}
+                        {% if form.keywords_text.errors %}
+                        <div class="text-danger">
+                            {% for error in form.keywords_text.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus-circle me-2"></i>Simpan Semua Kata Kunci
+                        </button>
+                        <a href="{% url 'scanner:keywords' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Batal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Pratinjau Kata Kunci</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Kata kunci yang akan diproses akan muncul di sini saat Anda mengetik.</p>
+                <div id="preview-container" class="d-none">
+                    <div class="alert alert-success">
+                        <strong><span id="preview-count">0</span> kata kunci akan ditambahkan:</strong>
+                        <div id="preview-list" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('{{ form.keywords_text.id_for_label }}');
+    const previewContainer = document.getElementById('preview-container');
+    const previewCount = document.getElementById('preview-count');
+    const previewList = document.getElementById('preview-list');
+
+    function updatePreview() {
+        const text = textarea.value;
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+        if (lines.length > 0) {
+            previewCount.textContent = lines.length;
+            previewList.innerHTML = lines.map(line =>
+                `<span class="badge bg-primary me-1 mb-1">${line}</span>`
+            ).join('');
+            previewContainer.classList.remove('d-none');
+        } else {
+            previewContainer.classList.add('d-none');
+        }
+    }
+
+    textarea.addEventListener('input', updatePreview);
+    updatePreview(); // Initial preview
+});
+</script>
+{% endblock %}

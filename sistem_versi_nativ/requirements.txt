@@ -1,0 +1,15 @@
+streamlit
+pandas
+joblib
+serpapi-google-search-results
+requests
+beautifulsoup4
+whois
+urllib3
+selenium
+python-dotenv
+plotly
+selenium-wire
+networkx
+python-jose
+bcrypt==3.2.2

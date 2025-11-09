@@ -1,0 +1,1296 @@
+{% extends "scanner/base.html" %}
+{% load scanner_filters %}
+
+{% block title %}Training Model - Sistem Deteksi Domain{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+    }
+    .chart-container-small {
+        position: relative;
+        height: 300px;
+        margin-bottom: 1.5rem;
+    }
+    .chart-export-btn {
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1><i class="fas fa-brain me-2"></i>Training Model Machine Learning</h1>
+    <p class="lead">Latih model klasifikasi domain menggunakan dataset terbaru</p>
+</div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card {% if dataset_exists %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        {% if dataset_exists %}
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        {% else %}
+                            <i class="fas fa-times-circle fa-3x text-danger"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-1">Status Dataset</h5>
+                        <p class="mb-0 text-muted">{{ dataset_msg }}</p>
+                        {% if dataset_rows %}
+                            <small class="text-muted">{{ dataset_rows }} data rows</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card {% if model_exists %}border-success{% else %}border-warning{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        {% if model_exists %}
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-1">Status Model</h5>
+                        <p class="mb-0 text-muted">{{ model_msg }}</p>
+                        {% if model_info %}
+                            <small class="text-muted">Labels: {{ model_info.labels|join:", " }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hasil Training Terakhir -->
+{% if model_info and model_info.training_info %}
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Hasil Training Terakhir</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Model Terbaik</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-primary mb-2">{{ model_info.training_info.best_model }}</h4>
+                        <div class="mt-2">
+                            <p class="mb-1"><strong>Akurasi:</strong> <span class="badge bg-success">{{ model_info.training_info.accuracy|floatformat:2 }}%</span></p>
+                            <p class="mb-0"><strong>F1-Score (Macro):</strong> <span class="badge bg-info">{{ model_info.training_info.f1_score|floatformat:2 }}%</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card border-secondary">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistik Training</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Training Size:</strong> {{ model_info.training_info.training_size }} samples</p>
+                        <p class="mb-1"><strong>Test Size:</strong> {{ model_info.training_info.test_size }} samples</p>
+                        <p class="mb-0"><strong>Total Models:</strong> {{ model_info.training_info.all_results|length }} (SVM, Naive Bayes, Random Forest)</p>
+                        {% if model_info.training_info.trained_at %}
+                        <p class="mb-0 mt-2"><small class="text-muted"><i class="fas fa-clock me-1"></i>Trained at: {{ model_info.training_info.trained_at|slice:":19" }}</small></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Perbandingan Semua Model -->
+        <div class="mt-3">
+            <h6 class="mb-2"><i class="fas fa-balance-scale me-2"></i>Perbandingan Semua Model</h6>
+            
+            <!-- Grafik Perbandingan Model -->
+            <div class="chart-container">
+                <canvas id="modelComparisonChart"></canvas>
+            </div>
+            <button class="btn btn-sm btn-outline-primary chart-export-btn" onclick="exportChart('modelComparisonChart', 'Perbandingan_Model')">
+                <i class="fas fa-download me-1"></i>Export Grafik
+            </button>
+            
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Model</th>
+                            <th class="text-end">Akurasi</th>
+                            <th class="text-end">F1-Score</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in model_info.training_info.all_results %}
+                        <tr {% if result.model == model_info.training_info.best_model %}class="table-success"{% endif %}>
+                            <td>{{ result.model }}</td>
+                            <td class="text-end">{{ result.accuracy|floatformat:2 }}%</td>
+                            <td class="text-end">{{ result.f1_score|floatformat:2 }}%</td>
+                            <td class="text-center">
+                                {% if result.model == model_info.training_info.best_model %}
+                                    <span class="badge bg-success"><i class="fas fa-trophy me-1"></i>Terpilih</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Distribusi Label -->
+        {% if model_info.training_info.label_counts %}
+        <div class="mt-3">
+            <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>Distribusi Label</h6>
+            
+            <!-- Grafik Pie Chart Distribusi Label -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container-small">
+                        <canvas id="labelDistributionChart"></canvas>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary chart-export-btn" onclick="exportChart('labelDistributionChart', 'Distribusi_Label')">
+                        <i class="fas fa-download me-1"></i>Export Grafik
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <div class="row">
+                        {% for label, count in model_info.training_info.label_counts.items %}
+                        <div class="col-md-6 mb-2">
+                            <div class="card border-light">
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block">{{ label|title }}</small>
+                                    <strong>{{ count }}</strong> samples
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Training Form -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Proses Training</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>Informasi Training</h6>
+            <ul class="mb-0">
+                <li>Proses training akan membandingkan 3 algoritma: <strong>SVM, Naive Bayes, dan Random Forest</strong></li>
+                <li>Model dengan F1-Score terbaik akan dipilih dan disimpan</li>
+                <li>Dataset harus berisi kolom: <code>title</code>, <code>description</code>, dan <code>label_status</code></li>
+                <li>Proses ini mungkin memakan waktu beberapa menit tergantung ukuran dataset</li>
+            </ul>
+        </div>
+
+        {% if not dataset_exists %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Dataset tidak ditemukan!</strong> Pastikan file <code>labeling_judol_dan_aman-26.csv</code> ada di root directory.
+            </div>
+        {% else %}
+            <form method="post" onsubmit="return confirm('Yakin ingin memulai training model? Proses ini mungkin memakan waktu beberapa menit.');">
+                {% csrf_token %}
+                <button type="submit" name="train_model" class="btn btn-primary btn-lg">
+                    <i class="fas fa-play me-2"></i>Mulai Training Model
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Training Results -->
+{% if training_result %}
+<div class="card">
+    <div class="card-header {% if training_result.success %}bg-success{% else %}bg-danger{% endif %} text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-{% if training_result.success %}check-circle{% else %}times-circle{% endif %} me-2"></i>
+            Hasil Training
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if training_result.success %}
+            <!-- Success Results -->
+            <div class="alert alert-success mb-4">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>{{ training_result.message }}</strong>
+            </div>
+
+            <div class="row">
+                <!-- Best Model Info -->
+                <div class="col-md-6 mb-4">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Model Terpilih</h6>
+                        </div>
+                        <div class="card-body">
+                            <h4 class="text-primary">{{ training_result.metrics.best_model }}</h4>
+                            <div class="mt-3">
+                                <p class="mb-2"><strong>Akurasi:</strong> <span class="badge bg-success">{{ training_result.metrics.accuracy|floatformat:2 }}%</span></p>
+                                <p class="mb-2"><strong>F1-Score (Macro):</strong> <span class="badge bg-info">{{ training_result.metrics.f1_score|floatformat:2 }}%</span></p>
+                                <p class="mb-0"><strong>Version:</strong> <code>{{ training_result.model_info.version }}</code></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Stats -->
+                <div class="col-md-6 mb-4">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistik Training</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2"><strong>Training Size:</strong> {{ training_result.training_size }} samples</p>
+                            <p class="mb-2"><strong>Test Size:</strong> {{ training_result.test_size }} samples</p>
+                            <p class="mb-0"><strong>Total Models:</strong> 3 (SVM, Naive Bayes, Random Forest)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grafik Training vs Test Size -->
+            <div class="mb-4">
+                <h6 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Pembagian Data Training dan Testing</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container-small">
+                            <canvas id="trainTestSplitChart"></canvas>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary chart-export-btn" onclick="exportChart('trainTestSplitChart', 'Pembagian_Training_Test')">
+                            <i class="fas fa-download me-1"></i>Export Grafik
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Informasi Pembagian Data</h6>
+                            <p class="mb-1"><strong>Training:</strong> {{ training_result.training_size }} samples (80%)</p>
+                            <p class="mb-1"><strong>Testing:</strong> {{ training_result.test_size }} samples (20%)</p>
+                            <p class="mb-0"><strong>Total:</strong> {{ training_result.training_size|add:training_result.test_size }} samples</p>
+                            <p class="mb-0 mt-2"><small><strong>Metode:</strong> Stratified Sampling (mempertahankan proporsi kelas)</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Models Comparison -->
+            <div class="mb-4">
+                <h5 class="mb-3"><i class="fas fa-balance-scale me-2"></i>Perbandingan Semua Model</h5>
+                
+                <!-- Grafik Perbandingan Model -->
+                <div class="chart-container">
+                    <canvas id="trainingResultModelChart"></canvas>
+                </div>
+                <button class="btn btn-sm btn-outline-primary chart-export-btn" onclick="exportChart('trainingResultModelChart', 'Perbandingan_Model_Training')">
+                    <i class="fas fa-download me-1"></i>Export Grafik
+                </button>
+                
+                <div class="table-responsive mt-3">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Model</th>
+                                <th class="text-end">Akurasi</th>
+                                <th class="text-end">F1-Score</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in training_result.metrics.all_results %}
+                            <tr {% if result.model == training_result.metrics.best_model %}class="table-success"{% endif %}>
+                                <td>{{ result.model }}</td>
+                                <td class="text-end">{{ result.accuracy|floatformat:2 }}%</td>
+                                <td class="text-end">{{ result.f1_score|floatformat:2 }}%</td>
+                                <td class="text-center">
+                                    {% if result.model == training_result.metrics.best_model %}
+                                        <span class="badge bg-success"><i class="fas fa-trophy me-1"></i>Terpilih</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Classification Report -->
+            {% if training_result.metrics.class_report %}
+            <div class="mb-4">
+                <h5 class="mb-3"><i class="fas fa-clipboard-list me-2"></i>Laporan Klasifikasi Detail</h5>
+                
+                <!-- Grafik Performa per Kelas -->
+                <div class="chart-container">
+                    <canvas id="classPerformanceChart"></canvas>
+                </div>
+                <button class="btn btn-sm btn-outline-primary chart-export-btn" onclick="exportChart('classPerformanceChart', 'Performa_Per_Kelas')">
+                    <i class="fas fa-download me-1"></i>Export Grafik
+                </button>
+                
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Label</th>
+                                <th class="text-end">Precision</th>
+                                <th class="text-end">Recall</th>
+                                <th class="text-end">F1-Score</th>
+                                <th class="text-end">Support</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for label, metrics in training_result.metrics.class_report.items %}
+                            {% if label not in 'accuracy macro avg weighted avg' %}
+                            <tr>
+                                <td><strong>{{ label }}</strong></td>
+                                <td class="text-end">{{ metrics.precision|floatformat:2 }}</td>
+                                <td class="text-end">{{ metrics.recall|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    {% if "f1-score" in metrics %}
+                                        {{ metrics|get_item:"f1-score"|floatformat:2 }}
+                                    {% elif metrics.f1_score %}
+                                        {{ metrics.f1_score|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ metrics.support }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td><strong>Macro Avg</strong></td>
+                                <td class="text-end">{{ training_result.metrics.class_report.macro_avg.precision|floatformat:2 }}</td>
+                                <td class="text-end">{{ training_result.metrics.class_report.macro_avg.recall|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    {% if training_result.metrics.class_report.macro_avg|get_item:"f1-score" %}
+                                        {{ training_result.metrics.class_report.macro_avg|get_item:"f1-score"|floatformat:2 }}
+                                    {% elif training_result.metrics.class_report.macro_avg.f1_score %}
+                                        {{ training_result.metrics.class_report.macro_avg.f1_score|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ training_result.metrics.class_report.macro_avg.support }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Accuracy</strong></td>
+                                <td colspan="4" class="text-end">
+                                    <strong>{{ training_result.metrics.class_report.accuracy|floatformat:2 }}</strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Error Results -->
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Training Gagal</h6>
+                <p class="mb-0">{{ training_result.message }}</p>
+                {% if training_result.error %}
+                <details class="mt-3">
+                    <summary class="text-danger">Detail Error</summary>
+                    <pre class="mt-2 p-3 bg-dark text-white" style="max-height: 300px; overflow-y: auto;"><code>{{ training_result.error }}</code></pre>
+                </details>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Dokumentasi Teknis -->
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Dokumentasi Teknis Training</h5>
+    </div>
+    <div class="card-body">
+        <!-- Tabs untuk dokumentasi -->
+        <ul class="nav nav-tabs mb-3" id="techDocTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                    <i class="fas fa-info-circle me-2"></i>Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dataset-tab" data-bs-toggle="tab" data-bs-target="#dataset" type="button" role="tab">
+                    <i class="fas fa-database me-2"></i>Dataset & Variabel
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="algoritma-tab" data-bs-toggle="tab" data-bs-target="#algoritma" type="button" role="tab">
+                    <i class="fas fa-cogs me-2"></i>Algoritma & Rumus
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="proses-tab" data-bs-toggle="tab" data-bs-target="#proses" type="button" role="tab">
+                    <i class="fas fa-project-diagram me-2"></i>Cara Kerja
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="evaluasi-tab" data-bs-toggle="tab" data-bs-target="#evaluasi" type="button" role="tab">
+                    <i class="fas fa-chart-line me-2"></i>Evaluasi
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="techDocTabContent">
+            <!-- Tab Overview -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <h6 class="mb-3"><i class="fas fa-lightbulb me-2"></i>Ringkasan Sistem Training</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Tujuan</h6>
+                        <p>Mengklasifikasikan konten domain menjadi 4 kategori:</p>
+                        <ul>
+                            <li><strong>Aman (0)</strong>: Konten normal/bersih</li>
+                            <li><strong>Hack Judol (1)</strong>: Konten perjudian ilegal</li>
+                            <li><strong>Pornografi (2)</strong>: Konten pornografi</li>
+                            <li><strong>Hacked (3)</strong>: Domain yang di-hack/deface</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Metodologi</h6>
+                        <ul>
+                            <li><strong>Supervised Learning</strong>: Klasifikasi teks Bahasa Indonesia</li>
+                            <li><strong>Feature Extraction</strong>: TF-IDF dengan 10,000 fitur</li>
+                            <li><strong>Preprocessing</strong>: Stemming Bahasa Indonesia (Sastrawi)</li>
+                            <li><strong>Algoritma</strong>: SVM, Naive Bayes, Random Forest</li>
+                            <li><strong>Evaluasi</strong>: F1-Score Macro Average</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Pembagian Data:</strong> 80% Training (~650 sampel) | 20% Testing (~162 sampel) dengan <strong>Stratified Sampling</strong>
+                </div>
+            </div>
+
+            <!-- Tab Dataset & Variabel -->
+            <div class="tab-pane fade" id="dataset" role="tabpanel">
+                <h6 class="mb-3"><i class="fas fa-table me-2"></i>Struktur Dataset</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Kolom</th>
+                                <th>Tipe Data</th>
+                                <th>Deskripsi</th>
+                                <th>Contoh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>url</code></td>
+                                <td>String</td>
+                                <td>URL lengkap dari halaman web</td>
+                                <td><code>https://example.com/page</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>title</code></td>
+                                <td>String</td>
+                                <td>Judul halaman web</td>
+                                <td><code>"DEPOSIT PULSA BONUS 100"</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>description</code></td>
+                                <td>String</td>
+                                <td>Deskripsi/konten halaman</td>
+                                <td><code>"Meberikan akses ke seluruh user..."</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>label_status</code></td>
+                                <td>String</td>
+                                <td>Label klasifikasi</td>
+                                <td><code>"hack judol"</code>, <code>"aman"</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h6 class="mt-4 mb-3"><i class="fas fa-code me-2"></i>Variabel yang Digunakan</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Variabel Input (Features)</h6>
+                        <ul>
+                            <li><code>X</code>: Teks gabungan dari <code>title</code> + <code>description</code> setelah preprocessing</li>
+                            <li><code>X_train</code>: Data training (80% dari total data)</li>
+                            <li><code>X_test</code>: Data testing (20% dari total data)</li>
+                        </ul>
+                        <div class="alert alert-warning mt-2 mb-0">
+                            <small><i class="fas fa-info-circle me-1"></i><strong>Catatan:</strong> Hanya <code>title</code> dan <code>description</code> yang digunakan sebagai features. Kolom <code>url</code> dan <code>timestamp</code> <strong>tidak digunakan</strong> dalam proses training.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Variabel Output (Target)</h6>
+                        <ul>
+                            <li><code>y</code>: Label numerik yang di-mapping dari <code>label_status</code></li>
+                            <li><code>y_train</code>: Label training</li>
+                            <li><code>y_test</code>: Label testing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="alert alert-secondary mt-3">
+                    <h6 class="mb-2"><i class="fas fa-tags me-2"></i>Label Mapping</h6>
+                    <code>{'aman': 0, 'hack judol': 1, 'pornografi': 2, 'hacked': 3}</code>
+                </div>
+
+                <h6 class="mt-4 mb-3"><i class="fas fa-chart-pie me-2"></i>Preprocessing</h6>
+                <ol>
+                    <li><strong>Penggabungan Teks</strong>: <code>text = title + ' ' + description</code>
+                        <ul>
+                            <li><small class="text-muted">Hanya <code>title</code> dan <code>description</code> yang digunakan</small></li>
+                            <li><small class="text-muted"><code>url</code> dan <code>timestamp</code> diabaikan</small></li>
+                        </ul>
+                    </li>
+                    <li><strong>Filtering</strong>: Hapus data dengan teks kosong</li>
+                    <li><strong>Stemming</strong>: Reduksi kata ke bentuk dasar menggunakan Sastrawi
+                        <ul>
+                            <li>Contoh: <code>"memberikan"</code> → <code>"beri"</code></li>
+                            <li>Contoh: <code>"pemain"</code> → <code>"main"</code></li>
+                        </ul>
+                    </li>
+                </ol>
+                <div class="alert alert-info mt-3">
+                    <h6 class="mb-2"><i class="fas fa-question-circle me-2"></i>Mengapa URL Tidak Digunakan?</h6>
+                    <ul class="mb-0">
+                        <li>Model ini fokus pada <strong>klasifikasi konten teks</strong> (title dan description)</li>
+                        <li>URL biasanya tidak mengandung informasi semantik yang relevan untuk klasifikasi konten</li>
+                        <li>Struktur URL (path, query parameters) tidak memberikan konteks tentang konten halaman</li>
+                        <li>Untuk klasifikasi SEO poisoning, konten teks lebih informatif daripada URL</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab Algoritma & Rumus -->
+            <div class="tab-pane fade" id="algoritma" role="tabpanel">
+                <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Feature Extraction: TF-IDF</h6>
+                <div class="alert alert-light">
+                    <h6 class="mb-2">Rumus TF-IDF</h6>
+                    <p class="mb-1"><strong>Term Frequency (TF):</strong></p>
+                    <p class="text-center mb-3">TF(t,d) = f<sub>t,d</sub> / Σf<sub>t',d</sub></p>
+                    
+                    <p class="mb-1"><strong>Inverse Document Frequency (IDF):</strong></p>
+                    <p class="text-center mb-3">IDF(t,D) = log(N / |d ∈ D : t ∈ d|)</p>
+                    
+                    <p class="mb-1"><strong>TF-IDF Score:</strong></p>
+                    <p class="text-center">TF-IDF(t,d,D) = TF(t,d) × IDF(t,D)</p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="mb-2">Parameter TF-IDF</h6>
+                    <ul>
+                        <li><code>max_features=10000</code>: Maksimal 10,000 fitur (kata unik)</li>
+                        <li><code>ngram_range=(1, 2)</code>: Unigram (1 kata) dan Bigram (2 kata)</li>
+                        <li>Contoh Unigram: <code>["deposit", "pulsa", "bonus"]</code></li>
+                        <li>Contoh Bigram: <code>["deposit pulsa", "pulsa bonus"]</code></li>
+                    </ul>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-robot me-2"></i>Algoritma Machine Learning</h6>
+
+                <!-- SVM -->
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-project-diagram me-2"></i>1. Support Vector Machine (SVM)</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Konfigurasi:</strong> <code>SVC(kernel='linear', C=1.0, class_weight='balanced')</code></p>
+                        <p><strong>Prinsip:</strong> Mencari hyperplane optimal yang memisahkan kelas dengan margin maksimal</p>
+                        <div class="alert alert-light">
+                            <h6 class="mb-2">Rumus Hyperplane</h6>
+                            <p class="text-center mb-2">w · x + b = 0</p>
+                            <p class="mb-1"><strong>Optimasi (Soft-margin SVM):</strong></p>
+                            <p class="text-center mb-2">min (1/2)||w||² + C Σξ<sub>i</sub></p>
+                            <p class="mb-0"><small>Subject to: y<sub>i</sub>(w · x<sub>i</sub> + b) ≥ 1 - ξ<sub>i</sub>, ξ<sub>i</sub> ≥ 0</small></p>
+                        </div>
+                        <p><strong>Kelebihan:</strong> Efektif untuk data high-dimensional, robust terhadap overfitting</p>
+                    </div>
+                </div>
+
+                <!-- Naive Bayes -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-brain me-2"></i>2. Naive Bayes (Multinomial)</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Konfigurasi:</strong> <code>MultinomialNB()</code></p>
+                        <p><strong>Prinsip:</strong> Menggunakan Teorema Bayes dengan asumsi independensi fitur</p>
+                        <div class="alert alert-light">
+                            <h6 class="mb-2">Rumus Teorema Bayes</h6>
+                            <p class="text-center mb-2">P(y|x) = P(x|y) × P(y) / P(x)</p>
+                            <p class="mb-1"><strong>Likelihood (Multinomial):</strong></p>
+                            <p class="text-center mb-2">P(x<sub>i</sub>|y) = (N<sub>yi</sub> + α) / (N<sub>y</sub> + α × |V|)</p>
+                            <p class="mb-0"><small>α = smoothing parameter (Laplace smoothing = 1.0)</small></p>
+                        </div>
+                        <p><strong>Kelebihan:</strong> Sangat cepat, efektif untuk data teks</p>
+                    </div>
+                </div>
+
+                <!-- Random Forest -->
+                <div class="card mb-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-tree me-2"></i>3. Random Forest</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Konfigurasi:</strong> <code>RandomForestClassifier(n_estimators=100, class_weight='balanced')</code></p>
+                        <p><strong>Prinsip:</strong> Ensemble method yang menggabungkan 100 decision tree</p>
+                        <div class="alert alert-light">
+                            <h6 class="mb-2">Rumus Entropy</h6>
+                            <p class="text-center mb-2">H(S) = -Σ p<sub>i</sub> log<sub>2</sub>(p<sub>i</sub>)</p>
+                            <p class="mb-1"><strong>Information Gain:</strong></p>
+                            <p class="text-center mb-2">IG(S,A) = H(S) - Σ (|S<sub>v</sub>|/|S|) × H(S<sub>v</sub>)</p>
+                            <p class="mb-0"><small>Prediksi: mode dari 100 tree</small></p>
+                        </div>
+                        <p><strong>Kelebihan:</strong> Robust terhadap overfitting, dapat menangani non-linear relationships</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Cara Kerja -->
+            <div class="tab-pane fade" id="proses" role="tabpanel">
+                <h6 class="mb-3"><i class="fas fa-sitemap me-2"></i>Alur Kerja Training</h6>
+                <div class="timeline">
+                    <div class="card mb-3 border-primary">
+                        <div class="card-body">
+                            <h6 class="text-primary"><i class="fas fa-1 me-2"></i>Load Dataset</h6>
+                            <p class="mb-0">Membaca file CSV (<code>labeling_judol_dan_aman-26.csv</code>)</p>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-info">
+                        <div class="card-body">
+                            <h6 class="text-info"><i class="fas fa-2 me-2"></i>Preprocessing</h6>
+                            <ul class="mb-0">
+                                <li>Gabungkan <code>title</code> + <code>description</code></li>
+                                <li>Filter data kosong</li>
+                                <li>Stemming Bahasa Indonesia (Sastrawi)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-success">
+                        <div class="card-body">
+                            <h6 class="text-success"><i class="fas fa-3 me-2"></i>Label Mapping</h6>
+                            <p class="mb-0">Convert <code>label_status</code> ke numerik: <code>{'aman': 0, 'hack judol': 1, 'pornografi': 2, 'hacked': 3}</code></p>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-warning">
+                        <div class="card-body">
+                            <h6 class="text-warning"><i class="fas fa-4 me-2"></i>Train-Test Split (80:20)</h6>
+                            <ul class="mb-0">
+                                <li><strong>Training:</strong> 80% (~650 sampel)</li>
+                                <li><strong>Testing:</strong> 20% (~162 sampel)</li>
+                                <li><strong>Stratified Sampling:</strong> Mempertahankan proporsi kelas</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-danger">
+                        <div class="card-body">
+                            <h6 class="text-danger"><i class="fas fa-5 me-2"></i>Feature Extraction (TF-IDF)</h6>
+                            <ul class="mb-0">
+                                <li>Transform teks ke vektor numerik</li>
+                                <li>10,000 fitur (kata/frasa unik)</li>
+                                <li>N-gram (1, 2): Unigram + Bigram</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-secondary">
+                        <div class="card-body">
+                            <h6 class="text-secondary"><i class="fas fa-6 me-2"></i>Training 3 Model</h6>
+                            <ul class="mb-0">
+                                <li>SVM (Linear Kernel)</li>
+                                <li>Naive Bayes (Multinomial)</li>
+                                <li>Random Forest (100 trees)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-primary">
+                        <div class="card-body">
+                            <h6 class="text-primary"><i class="fas fa-7 me-2"></i>Evaluasi Model</h6>
+                            <ul class="mb-0">
+                                <li>Accuracy, Precision, Recall, F1-Score</li>
+                                <li>F1-Score Macro Average (metrik utama)</li>
+                                <li>Classification Report per kelas</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-success">
+                        <div class="card-body">
+                            <h6 class="text-success"><i class="fas fa-8 me-2"></i>Pilih Model Terbaik</h6>
+                            <p class="mb-0">Berdasarkan <strong>F1-Score Macro Average</strong> tertinggi</p>
+                        </div>
+                    </div>
+                    <div class="card mb-3 border-info">
+                        <div class="card-body">
+                            <h6 class="text-info"><i class="fas fa-9 me-2"></i>Simpan Model</h6>
+                            <p class="mb-0">Simpan model terbaik ke <code>seo_poisoning_best_model.joblib</code></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Evaluasi -->
+            <div class="tab-pane fade" id="evaluasi" role="tabpanel">
+                <h6 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Metrik Evaluasi</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                <h6 class="text-primary">Accuracy (Akurasi)</h6>
+                                <p class="text-center mb-2">Accuracy = (TP + TN) / (TP + TN + FP + FN)</p>
+                                <p class="mb-0"><small>Proporsi prediksi yang benar</small></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-body">
+                                <h6 class="text-success">Precision (Presisi)</h6>
+                                <p class="text-center mb-2">Precision = TP / (TP + FP)</p>
+                                <p class="mb-0"><small>Proporsi prediksi positif yang benar</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-body">
+                                <h6 class="text-info">Recall (Sensitivitas)</h6>
+                                <p class="text-center mb-2">Recall = TP / (TP + FN)</p>
+                                <p class="mb-0"><small>Proporsi kasus positif yang terdeteksi</small></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <h6 class="text-warning">F1-Score</h6>
+                                <p class="text-center mb-2">F1 = 2 × (Precision × Recall) / (Precision + Recall)</p>
+                                <p class="mb-0"><small>Harmonic mean dari Precision dan Recall</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="fas fa-star me-2"></i>F1-Score Macro Average</h6>
+                    <p class="text-center mb-2">F1<sub>macro</sub> = (1/c) × Σ F1<sub>i</sub></p>
+                    <p class="mb-0"><strong>Alasan:</strong> Memberikan bobot yang sama untuk setiap kelas, penting untuk imbalanced data. Metrik ini digunakan untuk memilih model terbaik.</p>
+                </div>
+
+                <h6 class="mt-4 mb-3"><i class="fas fa-balance-scale me-2"></i>Pemilihan Model Terbaik</h6>
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>Kriteria:</strong> Model dengan <strong>F1-Score Macro Average</strong> tertinggi</p>
+                        <p><strong>Alasan:</strong></p>
+                        <ul>
+                            <li>Memberikan evaluasi yang adil untuk semua kelas</li>
+                            <li>Lebih baik dari accuracy untuk imbalanced data</li>
+                            <li>Mempertimbangkan performa per kelas, bukan hanya akurasi keseluruhan</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fas fa-book me-2"></i>Panduan</h5>
+    </div>
+    <div class="card-body">
+        <h6 class="mb-3">Kapan Perlu Training Ulang?</h6>
+        <ul>
+            <li>Setelah menambah dataset baru dengan hasil validasi</li>
+            <li>Ketika performa model menurun</li>
+            <li>Setelah update fitur atau metode preprocessing</li>
+            <li>Secara berkala (misalnya bulanan) untuk menjaga akurasi</li>
+        </ul>
+
+        <h6 class="mb-3 mt-4">Tips Training</h6>
+        <ul>
+            <li>Pastikan dataset cukup besar (minimal 100 data)</li>
+            <li>Pastikan distribusi label seimbang</li>
+            <li>Validasi hasil training dengan classification report</li>
+            <li>Backup model lama sebelum training ulang</li>
+        </ul>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Function to export chart as image
+function exportChart(canvasId, filename) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = filename + '.png';
+    link.href = url;
+    link.click();
+}
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    {% if model_info and model_info.training_info %}
+    // Chart 1: Model Comparison (from last training)
+    const modelComparisonCtx = document.getElementById('modelComparisonChart');
+    if (modelComparisonCtx) {
+        // Pastikan semua model muncul dengan urutan yang benar
+        const expectedModels = ['SVM (Linear)', 'Naive Bayes', 'Random Forest'];
+        const allResults = {{ model_info.training_info.all_results|safe }};
+        
+        const modelLabels = [];
+        const accuracyData = [];
+        const f1ScoreData = [];
+        
+        expectedModels.forEach(function(modelName) {
+            const result = allResults.find(function(r) { return r.model === modelName; });
+            if (result) {
+                modelLabels.push(result.model);
+                accuracyData.push((result.accuracy * 100).toFixed(2));
+                f1ScoreData.push((result.f1_score * 100).toFixed(2));
+            } else {
+                modelLabels.push(modelName);
+                accuracyData.push(0);
+                f1ScoreData.push(0);
+            }
+        });
+        
+        const modelComparisonData = {
+            labels: modelLabels,
+            datasets: [
+                {
+                    label: 'Accuracy (%)',
+                    data: accuracyData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'F1-Score (Macro) (%)',
+                    data: f1ScoreData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2
+                }
+            ]
+        };
+        
+        new Chart(modelComparisonCtx, {
+            type: 'bar',
+            data: modelComparisonData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Perbandingan Akurasi dan F1-Score Antar Model',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Persentase (%)',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Model',
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Chart 2: Label Distribution (Pie Chart)
+    const labelDistributionCtx = document.getElementById('labelDistributionChart');
+    if (labelDistributionCtx) {
+        const labelDistributionData = {
+            labels: [
+                {% for label, count in model_info.training_info.label_counts.items %}
+                '{{ label|title }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for label, count in model_info.training_info.label_counts.items %}
+                    {{ count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                    'rgba(255, 159, 64, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        new Chart(labelDistributionCtx, {
+            type: 'pie',
+            data: labelDistributionData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribusi Label Dataset',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value + ' samples (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    {% if training_result and training_result.success %}
+    // Chart 3: Training vs Test Split (Pie Chart)
+    const trainTestSplitCtx = document.getElementById('trainTestSplitChart');
+    if (trainTestSplitCtx) {
+        const trainTestSplitData = {
+            labels: ['Training Set (80%)', 'Test Set (20%)'],
+            datasets: [{
+                data: [{{ training_result.training_size }}, {{ training_result.test_size }}],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        new Chart(trainTestSplitCtx, {
+            type: 'pie',
+            data: trainTestSplitData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Pembagian Data Training dan Testing (80:20)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value + ' samples (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Chart 4: Model Comparison (from current training)
+    const trainingResultModelCtx = document.getElementById('trainingResultModelChart');
+    if (trainingResultModelCtx) {
+        // Pastikan semua model muncul dengan urutan yang benar
+        const expectedModels = ['SVM (Linear)', 'Naive Bayes', 'Random Forest'];
+        const allResults = {{ training_result.metrics.all_results|safe }};
+        
+        const modelLabels = [];
+        const accuracyData = [];
+        const f1ScoreData = [];
+        
+        expectedModels.forEach(function(modelName) {
+            const result = allResults.find(function(r) { return r.model === modelName; });
+            if (result) {
+                modelLabels.push(result.model);
+                accuracyData.push((result.accuracy * 100).toFixed(2));
+                f1ScoreData.push((result.f1_score * 100).toFixed(2));
+            } else {
+                modelLabels.push(modelName);
+                accuracyData.push(0);
+                f1ScoreData.push(0);
+            }
+        });
+        
+        const trainingResultModelData = {
+            labels: modelLabels,
+            datasets: [
+                {
+                    label: 'Accuracy (%)',
+                    data: accuracyData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'F1-Score (Macro) (%)',
+                    data: f1ScoreData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2
+                }
+            ]
+        };
+        
+        new Chart(trainingResultModelCtx, {
+            type: 'bar',
+            data: trainingResultModelData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Perbandingan Akurasi dan F1-Score Antar Model',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Persentase (%)',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Model',
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Chart 5: Class Performance (Precision, Recall, F1-Score per class)
+    const classPerformanceCtx = document.getElementById('classPerformanceChart');
+    if (classPerformanceCtx) {
+        const classLabels = [];
+        const precisionData = [];
+        const recallData = [];
+        const f1ScoreData = [];
+        
+        // Pastikan semua kelas muncul dengan urutan yang benar
+        const allLabels = ['aman', 'hack judol', 'pornografi', 'hacked'];
+        const classReport = {{ training_result.metrics.class_report|safe }};
+        
+        allLabels.forEach(function(label) {
+            classLabels.push(label.charAt(0).toUpperCase() + label.slice(1));
+            if (classReport[label]) {
+                const metrics = classReport[label];
+                precisionData.push(metrics.precision || 0);
+                recallData.push(metrics.recall || 0);
+                f1ScoreData.push(metrics['f1-score'] || metrics.f1_score || 0);
+            } else {
+                precisionData.push(0);
+                recallData.push(0);
+                f1ScoreData.push(0);
+            }
+        });
+        
+        const classPerformanceData = {
+            labels: classLabels,
+            datasets: [
+                {
+                    label: 'Precision',
+                    data: precisionData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Recall',
+                    data: recallData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2
+                },
+                {
+                    label: 'F1-Score',
+                    data: f1ScoreData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2
+                }
+            ]
+        };
+        
+        new Chart(classPerformanceCtx, {
+            type: 'bar',
+            data: classPerformanceData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Performa Metrik per Kelas (Precision, Recall, F1-Score)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1,
+                        title: {
+                            display: true,
+                            text: 'Nilai Metrik',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(2);
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Kelas',
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
+

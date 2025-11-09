@@ -1,0 +1,157 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Manajemen User - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-users me-2"></i>Manajemen Pengguna</h1>
+    <p class="lead">Kelola pengguna sistem deteksi domain</p>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    Kelola semua pengguna sistem deteksi SEO poisoning. Gunakan tombol di bawah untuk menambah user baru atau mengelola user yang ada.
+</div>
+
+<div class="mb-4">
+    <a href="{% url 'scanner:user_create' %}" class="btn btn-success">
+        <i class="fas fa-plus me-2"></i>Tambah User Baru
+    </a>
+</div>
+
+{% if all_users %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Daftar Pengguna</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th><i class="fas fa-user me-1"></i>Username</th>
+                        <th><i class="fas fa-envelope me-1"></i>Email</th>
+                        <th><i class="fas fa-building me-1"></i>Instansi</th>
+                        <th><i class="fas fa-user-tag me-1"></i>Role</th>
+                        <th><i class="fas fa-crown me-1"></i>Premium</th>
+                        <th><i class="fas fa-chart-line me-1"></i>Kuota</th>
+                        <th><i class="fas fa-circle me-1"></i>Status</th>
+                        <th><i class="fas fa-key me-1"></i>API Key</th>
+                        <th><i class="fas fa-clock me-1"></i>Terakhir Login</th>
+                        <th><i class="fas fa-cogs me-1"></i>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in users_with_quota %}
+                    {% with user=item.user quota=item.quota quota_status=item.quota_status %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email|default:"-" }}</td>
+                        <td>{{ user.organization_name|default:"-" }}</td>
+                        <td>
+                            {% if user.is_superuser %}
+                                <span class="badge bg-primary">Super Admin</span>
+                            {% elif user.is_staff %}
+                                <span class="badge bg-info">Client</span>
+                            {% else %}
+                                <span class="badge bg-secondary">User</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_premium %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-crown me-1"></i>Premium
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">Regular</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_superuser %}
+                                <span class="badge bg-success">Unlimited</span>
+                            {% elif quota and quota.quota_limit == 0 %}
+                                <span class="badge bg-success">Unlimited</span>
+                            {% elif quota_status %}
+                                {% if quota_status.is_unlimited %}
+                                    <span class="badge bg-success">{{ quota_status.used_quota }}/{{ quota_status.quota_limit }}</span>
+                                {% else %}
+                                    <span class="badge {% if quota_status.can_scan %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ quota_status.used_quota }}/{{ quota_status.quota_limit }}
+                                    </span>
+                                    <small class="d-block text-muted">
+                                        Sisa: {{ quota_status.remaining_quota }}
+                                    </small>
+                                {% endif %}
+                            {% elif quota %}
+                                {% if quota.quota_limit == 0 %}
+                                    <span class="badge bg-success">Unlimited</span>
+                                {% else %}
+                                    <span class="badge {% if quota.used_quota < quota.quota_limit %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ quota.used_quota }}/{{ quota.quota_limit }}
+                                    </span>
+                                    <small class="d-block text-muted">
+                                        Sisa: {{ quota.remaining_quota }}
+                                    </small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">Belum diset</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Aktif</span>
+                            {% else %}
+                                <span class="badge bg-danger">Non-Aktif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.user_api_key %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td>{% if user.last_login %}{{ user.last_login|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'scanner:user_edit' user.id %}" class="btn btn-sm btn-warning me-1">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                {% if user.id != request.user.id %}
+                                <form method="post" action="{% url 'scanner:user_toggle_active' user.id %}" class="d-inline me-1" 
+                                      onsubmit="return confirm('{% if user.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %} user {{ user.username }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm {% if user.is_active %}btn-secondary{% else %}btn-success{% endif %}">
+                                        <i class="fas fa-{% if user.is_active %}ban{% else %}check-circle{% endif %}"></i> 
+                                        {% if user.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <a href="{% url 'scanner:user_manage_quota' user.id %}" class="btn btn-sm btn-info me-1" title="Kelola Kuota">
+                                    <i class="fas fa-chart-line"></i> Kuota
+                                </a>
+                                <a href="{% url 'scanner:user_reset_password' user.id %}" class="btn btn-sm btn-info me-1">
+                                    <i class="fas fa-key"></i> Reset
+                                </a>
+                                <a href="{% url 'scanner:user_delete' user.id %}" class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Apakah Anda yakin ingin menghapus user {{ user.username }}?')">
+                                    <i class="fas fa-trash"></i> Hapus
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">Belum ada pengguna</h5>
+    <p class="text-muted">Pengguna akan muncul di sini setelah ditambahkan ke sistem.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,367 @@
+{% extends 'scanner/base.html' %}
+{% load static %}
+
+{% block title %}Analisis Mendalam - {{ item.url|truncatechars:50 }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-microscope"></i> Analisis Mendalam
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'scanner:scan_detail' scan.pk %}" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Kembali
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Item Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header bg-info">
+                                    <h5><i class="fas fa-link"></i> Informasi Item</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td width="25%"><strong>URL:</strong></td>
+                                            <td>
+                                                <a href="{{ item.url }}" target="_blank" class="text-break">
+                                                    {{ item.url }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Title:</strong></td>
+                                            <td>{{ item.title|default:"N/A" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Category:</strong></td>
+                                            <td>
+                                                <span class="badge badge-warning">{{ item_category.category_name }}</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Snippet:</strong></td>
+                                            <td>{{ item.snippet|default:"N/A"|truncatechars:200 }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Source:</strong></td>
+                                            <td><code>{{ item.source|default:"N/A" }}</code></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-warning">
+                                    <h5><i class="fas fa-shield-alt"></i> Status Verifikasi</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if verification %}
+                                        {% if verification.verification_status == 'live_malicious' %}
+                                            <span class="badge badge-danger badge-lg">Live Malicious</span>
+                                            <p class="mt-2 mb-0"><small>Konten berbahaya terdeteksi secara langsung di website.</small></p>
+                                        {% elif verification.verification_status == 'cache_only' %}
+                                            <span class="badge badge-warning badge-lg">Cache Only</span>
+                                            <p class="mt-2 mb-0"><small>Konten berbahaya hanya ditemukan di cache Google (kemungkinan cloaking).</small></p>
+                                        {% else %}
+                                            <span class="badge badge-success badge-lg">Clean</span>
+                                            <p class="mt-2 mb-0"><small>Tidak ditemukan konten berbahaya.</small></p>
+                                        {% endif %}
+                                        
+                                        {% if verification.method %}
+                                        <p class="mt-2 mb-0"><small><strong>Method:</strong> {{ verification.method }}</small></p>
+                                        {% endif %}
+                                        
+                                        {% if verification.error %}
+                                        <div class="alert alert-danger mt-2 mb-0">
+                                            <small><strong>Error:</strong> {{ verification.error }}</small>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge badge-secondary">Not Verified</span>
+                                    {% endif %}
+                                    
+                                    {% if request.user.is_admin %}
+                                    <hr>
+                                    <form method="post" action="{% url 'scanner:add_to_dataset' scan.pk %}" class="mt-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="url" value="{{ item.url }}">
+                                        <input type="hidden" name="title" value="{{ item.title|default:'' }}">
+                                        <input type="hidden" name="description" value="{{ item.snippet|default:'' }}">
+                                        <input type="hidden" name="label_status" value="malicious">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-database"></i> Tambah ke Dataset
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deep Analysis -->
+                    {% if deep_analysis %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-primary">
+                                    <h5><i class="fas fa-search"></i> Analisis Mendalam</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6><i class="fas fa-key"></i> Keywords Ditemukan</h6>
+                                            {% if deep_analysis.keywords_found %}
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Keyword</th>
+                                                                <th>Jumlah</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for keyword, count in deep_analysis.keywords_found.items %}
+                                                            <tr>
+                                                                <td><code>{{ keyword }}</code></td>
+                                                                <td><span class="badge badge-danger">{{ count }}</span></td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            {% else %}
+                                                <p class="text-muted">Tidak ada keywords malicious yang ditemukan.</p>
+                                            {% endif %}
+                                            
+                                            <h6 class="mt-3"><i class="fas fa-link"></i> Link Mencurigakan</h6>
+                                            {% if deep_analysis.suspicious_links %}
+                                                <ul class="list-group">
+                                                    {% for link in deep_analysis.suspicious_links %}
+                                                    <li class="list-group-item">
+                                                        <a href="{{ link.url }}" target="_blank" class="text-break">{{ link.url }}</a>
+                                                        {% if link.text %}
+                                                        <br><small class="text-muted">{{ link.text }}</small>
+                                                        {% endif %}
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="text-muted">Tidak ada link mencurigakan yang ditemukan.</p>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6><i class="fas fa-info-circle"></i> Informasi Teknis</h6>
+                                            <table class="table table-sm table-borderless">
+                                                <tr>
+                                                    <td width="40%"><strong>Status Code:</strong></td>
+                                                    <td>
+                                                        <span class="badge badge-{% if deep_analysis.status_code == 200 %}success{% elif deep_analysis.status_code >= 400 %}danger{% else %}warning{% endif %}">
+                                                            {{ deep_analysis.status_code|default:"N/A" }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Content Length:</strong></td>
+                                                    <td>{{ deep_analysis.content_length|default:"N/A"|filesizeformat }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Response Time:</strong></td>
+                                                    <td>{{ deep_analysis.response_time|default:"N/A"|floatformat:2 }} detik</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Status:</strong></td>
+                                                    <td>
+                                                        {% if deep_analysis.status == 'success' %}
+                                                            <span class="badge badge-success">Success</span>
+                                                        {% elif deep_analysis.status == 'error' %}
+                                                            <span class="badge badge-danger">Error</span>
+                                                        {% else %}
+                                                            <span class="badge badge-secondary">Unknown</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            
+                                            {% if deep_analysis.meta_tags %}
+                                            <h6 class="mt-3"><i class="fas fa-tags"></i> Meta Tags</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Tag</th>
+                                                            <th>Content</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for tag, content in deep_analysis.meta_tags.items %}
+                                                        <tr>
+                                                            <td><code>{{ tag }}</code></td>
+                                                            <td>{{ content|truncatechars:100 }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if deep_analysis.redirects %}
+                                            <h6 class="mt-3"><i class="fas fa-redo"></i> Redirect History</h6>
+                                            <ul class="list-group">
+                                                {% for redirect_url in deep_analysis.redirects %}
+                                                <li class="list-group-item">
+                                                    <code>{{ redirect_url }}</code>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% endif %}
+                                            
+                                            {% if deep_analysis.message %}
+                                            <div class="alert alert-danger mt-3">
+                                                <strong>Error:</strong> {{ deep_analysis.message }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- JavaScript Analysis -->
+                    {% if js_analysis %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-danger">
+                                    <h5><i class="fas fa-code"></i> Analisis JavaScript</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if js_analysis.suspicious_requests %}
+                                    <h6><i class="fas fa-network-wired"></i> Request Mencurigakan</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>URL</th>
+                                                    <th>Status Code</th>
+                                                    <th>Content Type</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for req in js_analysis.suspicious_requests %}
+                                                <tr>
+                                                    <td><code class="text-break">{{ req.url }}</code></td>
+                                                    <td><span class="badge badge-{% if req.status_code == 200 %}success{% else %}warning{% endif %}">{{ req.status_code }}</span></td>
+                                                    <td><small>{{ req.content_type|default:"N/A" }}</small></td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if js_analysis.high_entropy_scripts %}
+                                    <h6 class="mt-3"><i class="fas fa-file-code"></i> Script dengan Entropy Tinggi</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Entropy</th>
+                                                    <th>Preview</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for script in js_analysis.high_entropy_scripts %}
+                                                <tr>
+                                                    <td><span class="badge badge-warning">{{ script.entropy|floatformat:2 }}</span></td>
+                                                    <td><code>{{ script.preview }}</code></td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if js_analysis.dangerous_patterns %}
+                                    <h6 class="mt-3"><i class="fas fa-exclamation-triangle"></i> Pola Berbahaya Ditemukan</h6>
+                                    <ul class="list-group">
+                                        {% for pattern in js_analysis.dangerous_patterns %}
+                                        <li class="list-group-item list-group-item-danger">
+                                            <i class="fas fa-exclamation-circle"></i> {{ pattern }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% endif %}
+                                    
+                                    {% if not js_analysis.suspicious_requests and not js_analysis.high_entropy_scripts and not js_analysis.dangerous_patterns %}
+                                    <p class="text-muted">Tidak ada aktivitas JavaScript mencurigakan yang terdeteksi.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Verification Details -->
+                    {% if verification and verification.js_analysis %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-secondary">
+                                    <h5><i class="fas fa-check-circle"></i> Detail Verifikasi</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if verification.is_accessible %}
+                                        <p><i class="fas fa-check text-success"></i> URL dapat diakses</p>
+                                    {% else %}
+                                        <p><i class="fas fa-times text-danger"></i> URL tidak dapat diakses</p>
+                                    {% endif %}
+                                    
+                                    {% if verification.semantic_match %}
+                                        <p><strong>Semantic Match:</strong> 
+                                            <span class="badge badge-{% if verification.semantic_match == 'high' %}danger{% elif verification.semantic_match == 'medium' %}warning{% else %}secondary{% endif %}">
+                                                {{ verification.semantic_match|upper }}
+                                            </span>
+                                        </p>
+                                    {% endif %}
+                                    
+                                    {% if verification.keywords_match_score %}
+                                        <p><strong>Keywords Match Score:</strong> {{ verification.keywords_match_score|floatformat:2 }}</p>
+                                    {% endif %}
+                                    
+                                    {% if verification.title_similarity %}
+                                        <p><strong>Title Similarity:</strong> {{ verification.title_similarity|floatformat:2 }}</p>
+                                    {% endif %}
+                                    
+                                    {% if verification.content_similarity %}
+                                        <p><strong>Content Similarity:</strong> {{ verification.content_similarity|floatformat:2 }}</p>
+                                    {% endif %}
+                                    
+                                    {% if verification.malicious_confirmed %}
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> <strong>Malicious Content Dikonfirmasi!</strong>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

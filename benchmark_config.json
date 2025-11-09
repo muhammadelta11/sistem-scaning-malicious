@@ -1,0 +1,28 @@
+{
+  "benchmark_settings": {
+    "default_iterations": 3,
+    "test_domains": [
+      "google.com",
+      "github.com",
+      "stackoverflow.com",
+      "wikipedia.org"
+    ],
+    "scan_types": [
+      "Cepat (Google Only)",
+      "Lengkap (Google + Backlinks)"
+    ],
+    "enable_verification_options": [false, true]
+  },
+  "performance_metrics": {
+    "execution_time": true,
+    "memory_usage": true,
+    "api_calls": true,
+    "cache_hit_ratio": true,
+    "error_rate": true
+  },
+  "output_settings": {
+    "results_file": "benchmark_results.json",
+    "report_file": "benchmark_report.md",
+    "charts_directory": "benchmark_charts"
+  }
+}

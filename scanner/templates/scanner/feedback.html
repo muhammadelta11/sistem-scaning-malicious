@@ -1,0 +1,140 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Feedback - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1><i class="fas fa-comments me-2"></i>Feedback & Saran</h1>
+    <p class="lead">Berikan feedback, saran, atau laporan masalah terkait sistem</p>
+</div>
+
+<!-- Form Submit Feedback -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Kirim Feedback</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'scanner:feedback' %}">
+            {% csrf_token %}
+            <input type="hidden" name="submit_feedback" value="1">
+            <div class="mb-3">
+                <label for="message" class="form-label">Pesan Feedback</label>
+                <textarea class="form-control" id="message" name="message" rows="4" 
+                          placeholder="Tuliskan feedback, saran, atau laporan masalah Anda di sini..." required></textarea>
+                <small class="form-text text-muted">Feedback Anda akan terlihat oleh semua user dan dapat dibalas oleh admin.</small>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-1"></i>Kirim Feedback
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Daftar Feedback -->
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Daftar Feedback</h5>
+    </div>
+    <div class="card-body">
+        {% if feedbacks %}
+            {% for feedback in feedbacks %}
+            <div class="card mb-3 {% if feedback.is_resolved %}border-success{% else %}border-warning{% endif %}">
+                <div class="card-header {% if feedback.is_resolved %}bg-success text-white{% else %}bg-warning{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><i class="fas fa-user me-1"></i>{{ feedback.user.username }}</strong>
+                            {% if feedback.user.organization_name %}
+                                <span class="badge bg-primary ms-2"><i class="fas fa-building me-1"></i>{{ feedback.user.organization_name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2"><i class="fas fa-building me-1"></i>Tidak ada instansi</span>
+                            {% endif %}
+                            {% if feedback.user.is_admin %}
+                                <span class="badge bg-danger ms-2">ADMIN</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <small><i class="fas fa-clock me-1"></i>{{ feedback.created_at|date:"d M Y H:i" }}</small>
+                            {% if feedback.is_resolved %}
+                                <span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Ditangani</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark ms-2"><i class="fas fa-clock me-1"></i>Menunggu</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ feedback.message|linebreaks }}</p>
+                    
+                    {% if feedback.reply %}
+                    <div class="alert alert-info mt-3 mb-0">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong><i class="fas fa-reply me-1"></i>Balasan dari Admin:</strong>
+                            <small class="text-muted">
+                                <i class="fas fa-user-shield me-1"></i>{{ feedback.replied_by.username }}
+                                <i class="fas fa-clock ms-2 me-1"></i>{{ feedback.replied_at|date:"d M Y H:i" }}
+                            </small>
+                        </div>
+                        <p class="mb-0">{{ feedback.reply|linebreaks }}</p>
+                    </div>
+                    {% elif is_admin %}
+                    <!-- Form Reply untuk Admin -->
+                    <div class="mt-3 border-top pt-3">
+                        <form method="post" action="{% url 'scanner:feedback' %}" class="mt-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="reply_feedback" value="1">
+                            <input type="hidden" name="feedback_id" value="{{ feedback.id }}">
+                            <div class="mb-2">
+                                <label for="reply_{{ feedback.id }}" class="form-label"><strong><i class="fas fa-reply me-1"></i>Balas Feedback:</strong></label>
+                                <textarea class="form-control" id="reply_{{ feedback.id }}" name="reply" rows="3" 
+                                          placeholder="Tuliskan balasan Anda di sini..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>Kirim Balasan
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if feedbacks.has_other_pages %}
+            <nav aria-label="Feedback pagination">
+                <ul class="pagination justify-content-center">
+                    {% if feedbacks.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ feedbacks.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ feedbacks.number }} of {{ feedbacks.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if feedbacks.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ feedbacks.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ feedbacks.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Belum ada feedback. Jadilah yang pertama memberikan feedback!
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

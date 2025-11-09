@@ -1,0 +1,67 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Audit Log - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-shield-alt me-2"></i>Log Aktivitas Sistem</h1>
+    <p class="lead">Pantau aktivitas pengguna dalam sistem</p>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    Menampilkan 50 aktivitas terakhir dari semua pengguna sistem.
+</div>
+
+{% if audit_logs %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Riwayat Aktivitas</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th><i class="fas fa-clock me-1"></i>Waktu</th>
+                        <th><i class="fas fa-user me-1"></i>Pengguna</th>
+                        <th><i class="fas fa-building me-1"></i>Instansi</th>
+                        <th><i class="fas fa-cogs me-1"></i>Aksi</th>
+                        <th><i class="fas fa-info-circle me-1"></i>Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in audit_logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+                        <td>
+                            {% if log.user %}
+                                <span class="badge bg-primary">{{ log.user.username }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">System</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.organization_name|default:"-" }}</td>
+                        <td>
+                            <span class="badge bg-{% if 'SCAN' in log.action %}primary{% elif 'LOGIN' in log.action %}success{% elif 'LOGOUT' in log.action %}secondary{% else %}danger{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td>
+                            <span title="{{ log.details }}">{{ log.details|truncatechars:80 }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">Belum ada log aktivitas</h5>
+    <p class="text-muted">Aktivitas sistem akan muncul di sini setelah ada aktivitas pengguna.</p>
+</div>
+{% endif %}
+{% endblock %}

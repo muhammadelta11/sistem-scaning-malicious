@@ -1,0 +1,128 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Kelola Kuota - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-line me-2"></i>Kelola Kuota Scan</h1>
+    <p class="lead">Atur kuota scan untuk user: <strong>{{ target_user.username }}</strong></p>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Pengaturan Kuota</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="quota_limit" class="form-label">
+                            <i class="fas fa-chart-bar me-2"></i>Batas Kuota
+                        </label>
+                        <input type="number" class="form-control" id="quota_limit" name="quota_limit" 
+                               value="{{ quota.quota_limit }}" min="0" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Masukkan <strong>0</strong> untuk kuota unlimited
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reset_period" class="form-label">
+                            <i class="fas fa-clock me-2"></i>Periode Reset
+                        </label>
+                        <select class="form-select" id="reset_period" name="reset_period" required>
+                            <option value="daily" {% if quota.reset_period == 'daily' %}selected{% endif %}>Harian</option>
+                            <option value="weekly" {% if quota.reset_period == 'weekly' %}selected{% endif %}>Mingguan</option>
+                            <option value="monthly" {% if quota.reset_period == 'monthly' %}selected{% endif %}>Bulanan</option>
+                            <option value="yearly" {% if quota.reset_period == 'yearly' %}selected{% endif %}>Tahunan</option>
+                            <option value="never" {% if quota.reset_period == 'never' %}selected{% endif %}>Tidak pernah reset</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Frekuensi reset kuota ke 0
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Simpan Perubahan
+                        </button>
+                        <a href="{% url 'scanner:users' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Batal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Status Kuota</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>User:</strong><br>
+                    <span class="text-muted">{{ target_user.username }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Batas Kuota:</strong><br>
+                    {% if quota.quota_limit == 0 %}
+                        <span class="badge bg-success">Unlimited</span>
+                    {% else %}
+                        <span class="badge bg-primary">{{ quota.quota_limit }}</span>
+                    {% endif %}
+                    <small class="d-block text-muted mt-1">
+                        (Status: {% if quota_status.is_unlimited %}Unlimited{% else %}Terbatas{% endif %})
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Terpakai:</strong><br>
+                    <span class="badge bg-warning text-dark">{{ quota_status.used_quota }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Sisa:</strong><br>
+                    {% if quota.quota_limit == 0 %}
+                        <span class="badge bg-success">Unlimited</span>
+                    {% else %}
+                        <span class="badge {% if quota_status.can_scan %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ quota_status.remaining_quota }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% if quota_status.next_reset %}
+                <div class="mb-3">
+                    <strong>Reset Berikutnya:</strong><br>
+                    <small class="text-muted">{{ quota_status.next_reset|date:"d M Y, H:i" }}</small><br>
+                    <small class="text-muted">({{ quota_status.reset_period }})</small>
+                </div>
+                {% endif %}
+
+                <div class="progress" style="height: 25px;">
+                    {% if quota.quota_limit == 0 %}
+                        <div class="progress-bar bg-success" style="width: 100%">
+                            Unlimited
+                        </div>
+                    {% else %}
+                        {% widthratio quota.used_quota quota.quota_limit 100 as percentage %}
+                        <div class="progress-bar {% if quota_status.can_scan %}bg-success{% else %}bg-danger{% endif %}" 
+                             role="progressbar" style="width: {{ percentage }}%">
+                            {{ percentage }}%
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

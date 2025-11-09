@@ -1,0 +1,84 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}{% if title %}{{ title }}{% else %}Manajemen Kata Kunci{% endif %} - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-tag me-2"></i>{% if title %}{{ title }}{% else %}Manajemen Kata Kunci{% endif %}</h1>
+    <p class="lead">Kelola kata kunci deteksi sistem</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.keyword.id_for_label }}" class="form-label">
+                            <i class="fas fa-tag me-1"></i>{{ form.keyword.label }}
+                        </label>
+                        {{ form.keyword }}
+                        {% if form.keyword.help_text %}
+                        <div class="form-text">{{ form.keyword.help_text }}</div>
+                        {% endif %}
+                        {% if form.keyword.errors %}
+                        <div class="text-danger">
+                            {% for error in form.keyword.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            <i class="fas fa-folder me-1"></i>{{ form.category.label }}
+                        </label>
+                        {{ form.category }}
+                        {% if form.category.help_text %}
+                        <div class="form-text">{{ form.category.help_text }}</div>
+                        {% endif %}
+                        {% if form.category.errors %}
+                        <div class="text-danger">
+                            {% for error in form.category.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                <i class="fas fa-toggle-on me-1"></i>{{ form.is_active.label }}
+                            </label>
+                            {% if form.is_active.help_text %}
+                            <div class="form-text">{{ form.is_active.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        {% if form.is_active.errors %}
+                        <div class="text-danger">
+                            {% for error in form.is_active.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Simpan
+                        </button>
+                        <a href="{% url 'scanner:keywords' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Batal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

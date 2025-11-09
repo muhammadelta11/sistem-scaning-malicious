@@ -1,0 +1,779 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Konfigurasi Sistem - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-cogs me-2"></i>Konfigurasi Sistem</h1>
+    <p class="lead">Kelola pengaturan dan optimasi sistem untuk production</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <!-- System Status -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Status Sistem</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-brain fa-2x text-primary mb-2"></i>
+                            <h6>Model ML</h6>
+                            {% if model %}
+                                <span class="badge bg-success">✅ Tersedia</span>
+                            {% else %}
+                                <span class="badge bg-danger">❌ Tidak Tersedia</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-key fa-2x text-warning mb-2"></i>
+                            <h6>Total Keywords</h6>
+                            <span class="badge bg-primary">{{ keywords|length }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-calendar-alt fa-2x text-info mb-2"></i>
+                            <h6>Last Updated</h6>
+                            <span class="badge bg-secondary">
+                                {{ config.updated_at|date:"d M Y H:i"|default:"Belum ada" }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-user-circle fa-2x text-success mb-2"></i>
+                            <h6>Updated By</h6>
+                            <span class="badge bg-secondary">
+                                {{ config.updated_by_username|default:"System" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <form method="post" id="configForm">
+            {% csrf_token %}
+            
+            <!-- Nav Tabs -->
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="scan_config-tab" data-bs-toggle="tab" data-bs-target="#scan_config" type="button" role="tab">
+                        <i class="fas fa-cog me-2"></i>Scan Configuration
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="api_keys-tab" data-bs-toggle="tab" data-bs-target="#api_keys" type="button" role="tab">
+                        <i class="fas fa-key me-2"></i>API Keys
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab">
+                        <i class="fas fa-server me-2"></i>Production Settings
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="legacy-tab" data-bs-toggle="tab" data-bs-target="#legacy" type="button" role="tab">
+                        <i class="fas fa-history me-2"></i>Legacy
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- TAB 1: SCAN CONFIGURATION -->
+                <div class="tab-pane fade show active" id="scan_config" role="tabpanel">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Scan Configuration</h5>
+                            <small>Konfigurasi untuk proses scanning</small>
+                        </div>
+                        <div class="card-body">
+                            <!-- API Cache -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_api_cache" name="enable_api_cache" {% if config.enable_api_cache %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_api_cache">
+                                            <strong>Enable API Caching</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Aktifkan caching hasil search untuk hemat 95% quota SerpAPI</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cache TTL (hari)</label>
+                                    <input type="number" class="form-control" name="api_cache_ttl_days" value="{{ config.api_cache_ttl_days }}" min="1" max="90">
+                                    <small class="text-muted">Rekomendasi: 7 hari</small>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Search Optimization -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="use_comprehensive_query" name="use_comprehensive_query" {% if config.use_comprehensive_query %}checked{% endif %}>
+                                        <label class="form-check-label" for="use_comprehensive_query">
+                                            <strong>Use Comprehensive Query</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Gunakan 1 query comprehensive vs 4 query terpisah (hemat 75% API calls)</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Max Results per Query</label>
+                                    <input type="number" class="form-control" name="max_search_results" value="{{ config.max_search_results }}" min="10" max="200">
+                                    <small class="text-muted">Default: 100</small>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Verification -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_realtime_verification" name="enable_realtime_verification" {% if config.enable_realtime_verification %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_realtime_verification">
+                                            <strong>Real-time Verification</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Verifikasi konten real-time dengan Selenium (akurat tapi lambat)</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="use_tiered_verification" name="use_tiered_verification" {% if config.use_tiered_verification %}checked{% endif %}>
+                                        <label class="form-check-label" for="use_tiered_verification">
+                                            <strong>Tiered Verification</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Requests first, Selenium jika perlu (optimal)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: API KEYS -->
+                <div class="tab-pane fade" id="api_keys" role="tabpanel">
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-key me-2"></i>API Keys Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- API Key Status from .env -->
+                            <div class="alert alert-{% if api_key_configured %}success{% else %}warning{% endif %} mb-4">
+                                <i class="fas fa-{% if api_key_configured %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                                <strong>SERPAPI Key (from .env):</strong>
+                                {% if api_key_configured %}
+                                    <span class="badge bg-success">Dikonfigurasi</span>
+                                    <small class="text-muted ms-2">{{ api_key_preview }}</small>
+                                {% else %}
+                                    <span class="badge bg-danger">Belum Dikonfigurasi</span>
+                                    <span class="ms-2">⚠️ Tambahkan di .env ATAU gunakan database keys di bawah</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- API Keys from Database -->
+                            {% if api_keys %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Key Name</th>
+                                            <th>Value (Masked)</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for key in api_keys %}
+                                        <tr>
+                                            <td><strong>{{ key.key_name }}</strong></td>
+                                            <td><code>{{ key.mask_key }}</code></td>
+                                            <td>{{ key.description|default:"-" }}</td>
+                                            <td>
+                                                {% if key.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><small>{{ key.created_at|date:"d M Y H:i" }}</small></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick='editKey({{ key.id }}, "{{ key.key_name }}", "{{ key.key_value|escapejs }}", "{{ key.description|escapejs }}")'>
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <form method="post" class="d-inline" onsubmit="return confirm('Toggle API key ini?');">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="toggle_api_key" value="1">
+                                                    <input type="hidden" name="key_id" value="{{ key.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-{% if key.is_active %}warning{% else %}success{% endif %}">
+                                                        <i class="fas fa-{% if key.is_active %}toggle-on{% else %}toggle-off{% endif %}"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" class="d-inline" onsubmit="return confirm('Yakin hapus API key {{ key.key_name }}?');">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="delete_api_key" value="1">
+                                                    <input type="hidden" name="key_id" value="{{ key.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Belum ada API keys di database. Tambahkan via form di bawah atau <a href="/admin/scanner/apikey/" target="_blank">Admin Panel</a>.
+                            </div>
+                            {% endif %}
+
+                            <hr>
+
+                            <!-- Add/Edit API Key Form -->
+                            <form method="post" id="apiKeyForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="manage_api_key" value="1">
+                                <input type="hidden" name="key_id" id="edit_key_id" value="new">
+                                
+                                <h6><i class="fas fa-plus-circle me-2"></i>Tambah/Edit API Key</h6>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Key Name</label>
+                                        <input type="text" class="form-control" name="key_name" id="edit_key_name" placeholder="SERPAPI_MAIN" required>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label">Key Value</label>
+                                        <input type="text" class="form-control" name="key_value" id="edit_key_value" placeholder="Your API key here" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" name="description" id="edit_description" placeholder="Description (optional)">
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-save me-2"></i>Simpan API Key
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="resetKeyForm()">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Tips:</strong> Gunakan database keys untuk manage multiple keys atau rotate keys tanpa edit .env
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PRODUCTION SETTINGS -->
+                <div class="tab-pane fade" id="production" role="tabpanel">
+                    {% if production_settings %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-server me-2"></i>Production Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="productionForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="update_production_settings" value="1">
+                                
+                                <!-- Django Settings -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Django Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" name="debug_mode" id="debug_mode" {% if production_settings.debug_mode %}checked{% endif %}>
+                                            <label class="form-check-label text-danger" for="debug_mode">
+                                                <strong>Debug Mode</strong> (OFF di production!)
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Allowed Hosts</label>
+                                            <input type="text" class="form-control" name="allowed_hosts" value="{{ production_settings.allowed_hosts }}" placeholder="localhost,127.0.0.1,yourdomain.com">
+                                            <small class="text-muted">Comma-separated list</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Security Settings -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Security Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" name="csrf_cookie_secure" id="csrf_cookie_secure" {% if production_settings.csrf_cookie_secure %}checked{% endif %}>
+                                            <label class="form-check-label" for="csrf_cookie_secure">
+                                                CSRF Cookie Secure
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" name="session_cookie_secure" id="session_cookie_secure" {% if production_settings.session_cookie_secure %}checked{% endif %}>
+                                            <label class="form-check-label" for="session_cookie_secure">
+                                                Session Cookie Secure
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="secure_ssl_redirect" id="secure_ssl_redirect" {% if production_settings.secure_ssl_redirect %}checked{% endif %}>
+                                            <label class="form-check-label" for="secure_ssl_redirect">
+                                                Force HTTPS Redirect
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Email Settings -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Email Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" name="email_enabled" id="email_enabled" {% if production_settings.email_enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="email_enabled">
+                                                Enable Email Notifications
+                                            </label>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Email Host (SMTP)</label>
+                                                <input type="text" class="form-control" name="email_host" value="{{ production_settings.email_host }}" placeholder="smtp.gmail.com">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Port</label>
+                                                <input type="number" class="form-control" name="email_port" value="{{ production_settings.email_port }}">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <div class="form-check form-switch pt-4">
+                                                    <input class="form-check-input" type="checkbox" name="email_use_tls" id="email_use_tls" {% if production_settings.email_use_tls %}checked{% endif %}>
+                                                    <label class="form-check-label" for="email_use_tls">
+                                                        Use TLS
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mobile API Settings -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Mobile API Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" name="mobile_api_enabled" id="mobile_api_enabled" {% if production_settings.mobile_api_enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="mobile_api_enabled">
+                                                Enable Mobile API Access
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Rate Limit (requests/hour)</label>
+                                            <input type="number" class="form-control" name="mobile_api_rate_limit" value="{{ production_settings.mobile_api_rate_limit }}" min="1" max="10000">
+                                            <small class="text-muted">Per user</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Backup Settings -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Backup Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" name="auto_backup_enabled" id="auto_backup_enabled" {% if production_settings.auto_backup_enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="auto_backup_enabled">
+                                                Enable Automatic Backups
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Backup Frequency (days)</label>
+                                            <input type="number" class="form-control" name="backup_frequency_days" value="{{ production_settings.backup_frequency_days }}" min="1" max="365">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-save me-2"></i>Save Production Settings
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Production Settings belum tersedia. Jalankan migration terlebih dahulu.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- TAB 4: LEGACY -->
+                <div class="tab-pane fade" id="legacy" role="tabpanel">
+                    <!-- Illegal Content Detection -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Illegal Content Detection</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_illegal_content_detection" name="enable_illegal_content_detection" {% if config.enable_illegal_content_detection %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_illegal_content_detection">
+                                            <strong>Content Detection</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Deteksi narkoba, terorisme, penipuan, dll</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_unindexed_discovery" name="enable_unindexed_discovery" {% if config.enable_unindexed_discovery %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_unindexed_discovery">
+                                            <strong>Unindexed Discovery</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Temukan halaman tidak terindex Google</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_hidden_content_detection" name="enable_hidden_content_detection" {% if config.enable_hidden_content_detection %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_hidden_content_detection">
+                                            <strong>Hidden Content</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Deteksi CSS hidden, cloaking</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_injection_detection" name="enable_injection_detection" {% if config.enable_injection_detection %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_injection_detection">
+                                            <strong>Injection Detection</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Deteksi JavaScript/iframe injection</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backlink Analysis -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0"><i class="fas fa-link me-2"></i>Backlink Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enable_backlink_analysis" name="enable_backlink_analysis" {% if config.enable_backlink_analysis %}checked{% endif %}>
+                                <label class="form-check-label" for="enable_backlink_analysis">
+                                    <strong>Enable Backlink Analysis</strong> <span class="badge bg-warning">+1 API</span>
+                                </label>
+                            </div>
+                            <small class="text-muted">Analisis backlink untuk menemukan pola mencurigakan</small>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Admin Notes</h5>
+                        </div>
+                        <div class="card-body">
+                            <textarea class="form-control" name="notes" rows="3" placeholder="Catatan admin tentang konfigurasi ini...">{{ config.notes|default:"" }}</textarea>
+                            <small class="text-muted">Internal notes untuk dokumentasi</small>
+                        </div>
+                    </div>
+
+                    <!-- Kata Kunci Deteksi -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-keywords me-2"></i>Kata Kunci Deteksi</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th><i class="fas fa-tag me-1"></i>Kata Kunci</th>
+                                            <th><i class="fas fa-folder me-1"></i>Kategori</th>
+                                            <th><i class="fas fa-toggle-on me-1"></i>Status</th>
+                                            <th><i class="fas fa-cogs me-1"></i>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for keyword in keywords %}
+                                        <tr>
+                                            <td>{{ keyword.keyword }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if keyword.category == 'judi' %}danger{% elif keyword.category == 'pornografi' %}warning{% elif keyword.category == 'hacking' %}dark{% else %}secondary{% endif %}">
+                                                    {{ keyword.get_category_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if keyword.is_active %}
+                                                    <span class="badge bg-success">Aktif</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Non-Aktif</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'scanner:keyword_edit' keyword.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i><br>Belum ada kata kunci
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mb-3">
+                                <a href="{% url 'scanner:keywords' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-list me-2"></i>Kelola Kata Kunci Lengkap
+                                </a>
+                                <a href="{% url 'scanner:keyword_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Tambah Kata Kunci
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Legacy Mode -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Legacy Mode</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="use_native_flow" name="use_native_flow" {% if use_native_flow %}checked{% endif %}>
+                                    <label class="form-check-label" for="use_native_flow">
+                                        <strong>Native Flow</strong> (lebih cepat, deterministik)
+                                    </label>
+                                </div>
+                                <small class="text-muted">Matikan untuk memakai Verified Flow (tiered verification)</small>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-save me-1"></i>Simpan Mode
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button type="submit" name="update_config" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Simpan Semua Konfigurasi
+                            </button>
+                            <a href="{% url 'scanner:config' %}" class="btn btn-secondary btn-lg ms-2">
+                                <i class="fas fa-undo me-2"></i>Reset
+                            </a>
+                        </div>
+                        <div>
+                            <span class="badge bg-info">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Perubahan akan langsung berlaku tanpa restart server
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quick Preset Buttons -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-magic me-2"></i>Quick Presets</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Preset Aktif Saat Ini:</strong> 
+                    <span class="badge bg-{% if active_preset == 'hemat' %}success{% elif active_preset == 'balance' %}primary{% elif active_preset == 'lengkap' %}danger{% else %}secondary{% endif %} fs-6">
+                        {% if active_preset == 'hemat' %}✅ Hemat Maksimal
+                        {% elif active_preset == 'balance' %}⚖️ Balanced
+                        {% elif active_preset == 'lengkap' %}🚀 Scan Lengkap
+                        {% else %}⚙️ Custom Configuration{% endif %}
+                    </span>
+                </div>
+                <p class="text-muted">Klik untuk load preset konfigurasi:</p>
+                <div class="btn-group-vertical w-100" role="group">
+                    <button type="button" class="btn btn-outline-success mb-2 {% if active_preset == 'hemat' %}border-3 border-success{% endif %}" onclick="loadPreset('hemat')">
+                        {% if active_preset == 'hemat' %}<i class="fas fa-check-circle me-2"></i>{% else %}<i class="fas fa-piggy-bank me-2"></i>{% endif %}
+                        Hemat Maksimal (~2-4 API calls/scan)
+                        {% if active_preset == 'hemat' %}<span class="badge bg-success ms-2">AKTIF</span>{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-outline-primary mb-2 {% if active_preset == 'balance' %}border-3 border-primary{% endif %}" onclick="loadPreset('balance')">
+                        {% if active_preset == 'balance' %}<i class="fas fa-check-circle me-2"></i>{% else %}<i class="fas fa-balance-scale me-2"></i>{% endif %}
+                        Balanced (~5-10 API calls/scan)
+                        {% if active_preset == 'balance' %}<span class="badge bg-primary ms-2">AKTIF</span>{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger mb-2 {% if active_preset == 'lengkap' %}border-3 border-danger{% endif %}" onclick="loadPreset('lengkap')">
+                        {% if active_preset == 'lengkap' %}<i class="fas fa-check-circle me-2"></i>{% else %}<i class="fas fa-rocket me-2"></i>{% endif %}
+                        Scan Lengkap (~20-30 API calls/scan)
+                        {% if active_preset == 'lengkap' %}<span class="badge bg-danger ms-2">AKTIF</span>{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadPreset(type) {
+    const presets = {
+        hemat: {
+            enable_api_cache: true,
+            api_cache_ttl_days: 14,
+            use_comprehensive_query: true,
+            max_search_results: 100,
+            enable_bing_search: false,
+            enable_duckduckgo_search: true,
+            enable_subdomain_dns_lookup: true,
+            enable_subdomain_search: false,
+            enable_subdomain_content_scan: false,
+            max_subdomains_to_scan: 5,
+            enable_deep_crawling: true,
+            enable_sitemap_analysis: true,
+            enable_path_discovery: true,
+            enable_graph_analysis: false,
+            max_crawl_pages: 30,
+            enable_realtime_verification: true,
+            use_tiered_verification: true,
+            enable_illegal_content_detection: true,
+            enable_hidden_content_detection: true,
+            enable_injection_detection: true,
+            enable_unindexed_discovery: false,
+            enable_backlink_analysis: false
+        },
+        balance: {
+            enable_api_cache: true,
+            api_cache_ttl_days: 7,
+            use_comprehensive_query: true,
+            max_search_results: 100,
+            enable_bing_search: false,
+            enable_duckduckgo_search: true,
+            enable_subdomain_dns_lookup: true,
+            enable_subdomain_search: false,
+            enable_subdomain_content_scan: false,
+            max_subdomains_to_scan: 10,
+            enable_deep_crawling: true,
+            enable_sitemap_analysis: true,
+            enable_path_discovery: true,
+            enable_graph_analysis: true,
+            max_crawl_pages: 50,
+            enable_realtime_verification: true,
+            use_tiered_verification: true,
+            enable_illegal_content_detection: true,
+            enable_hidden_content_detection: true,
+            enable_injection_detection: true,
+            enable_unindexed_discovery: true,
+            enable_backlink_analysis: false
+        },
+        lengkap: {
+            enable_api_cache: true,
+            api_cache_ttl_days: 7,
+            use_comprehensive_query: true,
+            max_search_results: 200,
+            enable_bing_search: true,
+            enable_duckduckgo_search: true,
+            enable_subdomain_dns_lookup: true,
+            enable_subdomain_search: true,
+            enable_subdomain_content_scan: true,
+            max_subdomains_to_scan: 20,
+            enable_deep_crawling: true,
+            enable_sitemap_analysis: true,
+            enable_path_discovery: true,
+            enable_graph_analysis: true,
+            max_crawl_pages: 100,
+            enable_realtime_verification: true,
+            use_tiered_verification: true,
+            enable_illegal_content_detection: true,
+            enable_hidden_content_detection: true,
+            enable_injection_detection: true,
+            enable_unindexed_discovery: true,
+            enable_backlink_analysis: true
+        }
+    };
+    
+    const preset = presets[type];
+    if (!preset) return;
+    
+    // Set all checkboxes and inputs
+    Object.keys(preset).forEach(key => {
+        const elem = document.querySelector(`[name="${key}"]`);
+        if (elem) {
+            if (elem.type === 'checkbox') {
+                elem.checked = preset[key];
+            } else {
+                elem.value = preset[key];
+            }
+        }
+    });
+    
+    alert(`Preset "${type.toUpperCase()}" loaded! Klik "Simpan Semua Konfigurasi" untuk apply.`);
+}
+
+// API Key management functions
+function editKey(keyId, keyName, keyValue, description) {
+    document.getElementById('edit_key_id').value = keyId;
+    document.getElementById('edit_key_name').value = keyName;
+    document.getElementById('edit_key_value').value = keyValue;
+    document.getElementById('edit_description').value = description || '';
+    // Scroll to form
+    document.getElementById('apiKeyForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetKeyForm() {
+    document.getElementById('edit_key_id').value = 'new';
+    document.getElementById('edit_key_name').value = '';
+    document.getElementById('edit_key_value').value = '';
+    document.getElementById('edit_description').value = '';
+}
+
+</script>
+{% endblock %}

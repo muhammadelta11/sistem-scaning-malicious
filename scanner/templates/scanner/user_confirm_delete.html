@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hapus User - Pemindai Domain</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .logout-btn { padding: 8px 12px; background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; text-decoration: none;}
+        .confirm-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; text-align: center; }
+        .warning-icon { font-size: 48px; color: #ffc107; margin-bottom: 20px; }
+        .user-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .user-info strong { color: #495057; }
+        .btn-delete { background: #dc3545; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .btn-delete:hover { background: #c82333; }
+        .btn-cancel { background: #6c757d; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; margin-left: 10px; }
+        .btn-cancel:hover { background: #545b62; }
+    </style>
+</head>
+<body>
+    <!-- Main Navigation Menu -->
+    <nav style="background: #343a40; color: white; padding: 15px 0; margin-bottom: 30px; border-radius: 8px;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <a href="{% url 'scanner:scanner_page' %}" style="color: white; text-decoration: none; font-weight: bold; font-size: 18px;">🔍 Pemindai Domain</a>
+                    <a href="{% url 'scanner:dashboard' %}" style="color: white; text-decoration: none;">📊 Dashboard Peringkat</a>
+                    <a href="{% url 'scanner:config' %}" style="color: white; text-decoration: none;">⚙️ Konfigurasi</a>
+                    <a href="{% url 'scanner:audit' %}" style="color: white; text-decoration: none;">🛡️ Audit Log</a>
+                    <a href="{% url 'scanner:users' %}" style="color: white; text-decoration: none;">👤 Manajemen User</a>
+                    <a href="{% url 'scanner:profile' %}" style="color: white; text-decoration: none;">👤 Profile</a>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 14px;">Login sebagai: <strong>{{ user.username }}</strong> ({{ user.organization_name }})</span>
+                    <form method="post" action="{% url 'scanner:logout' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="confirm-container">
+        <div class="warning-icon">⚠️</div>
+        <h1>Hapus User</h1>
+        <p>Apakah Anda yakin ingin menghapus user berikut?</p>
+
+        <div class="user-info">
+            <p><strong>Username:</strong> {{ user_obj.username }}</p>
+            <p><strong>Email:</strong> {{ user_obj.email|default:"-" }}</p>
+            <p><strong>Instansi:</strong> {{ user_obj.organization_name|default:"-" }}</p>
+        </div>
+
+        <p style="color: #dc3545; font-weight: bold;">Tindakan ini tidak dapat dibatalkan!</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn-delete">Ya, Hapus User</button>
+            <a href="{% url 'scanner:users' %}" class="btn-cancel">Batal</a>
+        </form>
+    </div>
+</body>
+</html>

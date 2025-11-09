@@ -1,0 +1,389 @@
+{% extends "scanner/base.html" %}
+
+{% block title %}Profile - Sistem Deteksi Domain{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="fas fa-user me-2"></i>Profile Pengguna</h1>
+            <p class="lead mb-0">Informasi akun dan aktivitas Anda</p>
+        </div>
+        <div>
+            <a href="{% url 'scanner:scanner_page' %}" class="btn btn-primary">
+                <i class="fas fa-search me-2"></i>Mulai Scan
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-search fa-2x text-primary mb-2"></i>
+                <h3 class="mb-0">{{ total_scans }}</h3>
+                <p class="text-muted mb-0"><small>Total Scan</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h3 class="mb-0">{{ completed_scans }}</h3>
+                <p class="text-muted mb-0"><small>Selesai</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                <h3 class="mb-0">{{ failed_scans }}</h3>
+                <p class="text-muted mb-0"><small>Gagal</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <i class="fas fa-globe fa-2x text-info mb-2"></i>
+                <h3 class="mb-0">{{ unique_domains }}</h3>
+                <p class="text-muted mb-0"><small>Domain Unik</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Informasi Profil</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-user text-primary me-2"></i>
+                                <strong class="text-muted">Username</strong>
+                            </div>
+                            <div class="h5 mb-0">{{ user.username }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-envelope text-primary me-2"></i>
+                                <strong class="text-muted">Email</strong>
+                            </div>
+                            <div class="h5 mb-0">{{ user.email|default:"Tidak tersedia" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-building text-primary me-2"></i>
+                                <strong class="text-muted">Instansi</strong>
+                            </div>
+                            <div class="h5 mb-0">{{ user.organization_name|default:"Tidak tersedia" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-user-tag text-primary me-2"></i>
+                                <strong class="text-muted">Role</strong>
+                            </div>
+                            <div class="mb-0">
+                                {% if user.is_superuser %}
+                                    <span class="badge bg-primary fs-6">Super Admin</span>
+                                {% elif user.is_staff %}
+                                    <span class="badge bg-info fs-6">Staff</span>
+                                {% else %}
+                                    <span class="badge bg-secondary fs-6">User</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-circle text-primary me-2"></i>
+                                <strong class="text-muted">Status</strong>
+                            </div>
+                            <div class="mb-0">
+                                {% if user.is_active %}
+                                    <span class="badge bg-success fs-6">Aktif</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">Non-Aktif</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-crown text-warning me-2"></i>
+                                <strong class="text-muted">Premium</strong>
+                            </div>
+                            <div class="mb-0">
+                                {% if is_premium %}
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-crown me-1"></i>Premium
+                                    </span>
+                                    <small class="d-block text-muted mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Hasil scan disimpan permanen
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-secondary fs-6">Regular</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if quota_status %}
+                    <div class="col-12">
+                        <div class="border rounded p-3 bg-light">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-chart-line text-primary me-2"></i>
+                                <strong class="text-muted">Status Kuota Scan</strong>
+                            </div>
+                            {% if quota_status.is_unlimited %}
+                                <div class="mb-2">
+                                    <span class="badge bg-success fs-6 px-3 py-2">
+                                        <i class="fas fa-infinity me-1"></i>Unlimited
+                                    </span>
+                                    <small class="d-block text-muted mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Anda dapat melakukan scan tanpa batas
+                                    </small>
+                                </div>
+                            {% else %}
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block mb-1">Batas Kuota</small>
+                                        <span class="badge bg-primary fs-6">{{ quota_status.quota_limit }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block mb-1">Terpakai</small>
+                                        <span class="badge bg-warning text-dark fs-6">{{ quota_status.used_quota }}</span>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted d-block mb-1">Sisa Kuota</small>
+                                    <span class="badge {% if quota_status.can_scan %}bg-success{% else %}bg-danger{% endif %} fs-5 px-3 py-2">
+                                        {{ quota_status.remaining_quota }} scan
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 25px;">
+                                    {% widthratio quota_status.used_quota quota_status.quota_limit 100 as percentage %}
+                                    <div class="progress-bar {% if quota_status.can_scan %}{% if percentage > 80 %}bg-warning{% else %}bg-success{% endif %}{% else %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ percentage }}%"
+                                         aria-valuenow="{{ percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ percentage }}%
+                                    </div>
+                                </div>
+                                {% if quota_status.next_reset %}
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Reset berikutnya: {{ quota_status.next_reset|date:"d M Y, H:i" }}
+                                        <span class="badge bg-secondary ms-1">{{ quota_status.reset_period }}</span>
+                                    </small>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-calendar-plus text-primary me-2"></i>
+                                <strong class="text-muted">Bergabung</strong>
+                            </div>
+                            <div class="h6 mb-0">{{ user.date_joined|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-clock text-primary me-2"></i>
+                                <strong class="text-muted">Login Terakhir</strong>
+                            </div>
+                            <div class="h6 mb-0">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"d M Y, H:i" }}
+                                {% else %}
+                                    Belum pernah login
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-key text-primary me-2"></i>
+                                <strong class="text-muted">API Key Pribadi</strong>
+                            </div>
+                            <div class="mb-0">
+                                {% if user.user_api_key %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Dikonfigurasi
+                                    </span>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Silakan konfigurasi di Settings untuk mengedit
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle me-1"></i>Tidak Dikonfigurasi
+                                    </span>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Gunakan API key admin atau konfigurasi sendiri
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Statistics & History -->
+    <div class="col-lg-7">
+        <!-- Detailed Statistics -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistik Detail</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-clock text-warning me-2"></i>Pending</span>
+                            <strong>{{ pending_scans }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-percentage"></i>Success Rate</span>
+                            <strong>
+                                {% if total_scans > 0 %}
+                                    {{ completed_scans|floatformat:0 }}% ({{ completed_scans }}/{{ total_scans }})
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="progress" style="height: 25px;">
+                            {% if total_scans > 0 %}
+                                {% widthratio completed_scans total_scans 100 as success_percentage %}
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ success_percentage }}%"
+                                     aria-valuenow="{{ success_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ success_percentage }}% Sukses
+                                </div>
+                            {% else %}
+                                <div class="progress-bar" role="progressbar" style="width: 0%">
+                                    Belum ada data
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Riwayat Scan Terbaru</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_scans %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>Status</th>
+                                    <th>Tanggal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in recent_scans %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ scan.domain }}</strong>
+                                        <br><small class="text-muted">{{ scan.scan_type }}</small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'COMPLETED' %}
+                                            <span class="badge bg-success">Selesai</span>
+                                        {% elif scan.status == 'FAILED' %}
+                                            <span class="badge bg-danger">Gagal</span>
+                                        {% elif scan.status == 'PROCESSING' %}
+                                            <span class="badge bg-warning">Proses</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ scan.start_time|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'COMPLETED' %}
+                                            <a href="{% url 'scanner:scan_detail' scan.pk %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'scanner:scanner_page' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>Lihat Semua Scan
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info text-center py-4">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p class="mb-0">Belum ada riwayat scan</p>
+                        <a href="{% url 'scanner:scanner_page' %}" class="btn btn-primary mt-2">
+                            <i class="fas fa-search me-2"></i>Mulai Scan Pertama
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
