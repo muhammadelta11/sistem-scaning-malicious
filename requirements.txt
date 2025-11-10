@@ -21,3 +21,4 @@ google-search-results
 tldextract
 dj-database-url
 psycopg2-binary
+setuptools
